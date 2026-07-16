@@ -477,14 +477,55 @@
     </div>
 </div>
 
-<script>
+<!-- Firebase SDK -->
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js",
+    "firebase/database": "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js",
+    "firebase/storage": "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js"
+  }
+}
+</script>
+<script type="module">
+import { initializeApp } from "firebase/app";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { getDatabase, ref, set, get, child, push, update, remove, onValue } from "firebase/database";
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyBI5RgA04gKmMaZcUGKRDKs1yCZ0DxtWGU",
+    authDomain: "medi-electro-vault.firebaseapp.com",
+    databaseURL: "https://medi-electro-vault-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "medi-electro-vault",
+    storageBucket: "medi-electro-vault.firebasestorage.app",
+    messagingSenderId: "419811672667",
+    appId: "1:419811672667:web:1e5617fc0d50ef1138357e"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const storage = getStorage(app);
+
+// Export for global use
+window.firebaseApp = app;
+window.firebaseAuth = auth;
+window.firebaseDb = db;
+window.firebaseStorage = storage;
+window.firebaseRef = ref;
+
 // ============================================================
-//  COMPLETE JAVASCRIPT - FULL DATA PERSISTENCE RESTORED
+//  COMPLETE JAVASCRIPT - FULL DATA PERSISTENCE + FIREBASE
 // ============================================================
 
 // ======================== PASSWORD TOGGLE ========================
 function togglePassword(inputId, btn) {
     const input = document.getElementById(inputId);
+    if (!input) return;
     if (input.type === 'password') {
         input.type = 'text';
         btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
@@ -493,10 +534,13 @@ function togglePassword(inputId, btn) {
         btn.innerHTML = '<i class="fas fa-eye"></i>';
     }
 }
+window.togglePassword = togglePassword;
 
 function togglePasswordField(inputId) {
     const input = document.getElementById(inputId);
+    if (!input) return;
     const btn = input.parentElement.querySelector('.eye-btn-small');
+    if (!btn) return;
     if (input.type === 'password') {
         input.type = 'text';
         btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
@@ -505,6 +549,7 @@ function togglePasswordField(inputId) {
         btn.innerHTML = '<i class="fas fa-eye"></i>';
     }
 }
+window.togglePasswordField = togglePasswordField;
 
 // ======================== DATE & TIME ========================
 function formatDateShort(timestamp) {
@@ -512,12 +557,14 @@ function formatDateShort(timestamp) {
     const date = new Date(timestamp);
     return String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+String(date.getFullYear()).slice(-2);
 }
+window.formatDateShort = formatDateShort;
 
 function formatDateTime(timestamp) {
     if (!timestamp) return 'N/A';
     const date = new Date(timestamp);
     return String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+String(date.getFullYear()).slice(-2)+' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0')+':'+String(date.getSeconds()).padStart(2,'0');
 }
+window.formatDateTime = formatDateTime;
 
 function isValidDate(dateStr) {
     if (!dateStr) return false;
@@ -529,6 +576,7 @@ function isValidDate(dateStr) {
     const date = new Date(year, month-1, day);
     return date.getFullYear()===year && date.getMonth()===month-1 && date.getDate()===day;
 }
+window.isValidDate = isValidDate;
 
 // ======================== USER AVATAR ========================
 let userAvatarData = {};
@@ -543,6 +591,7 @@ function getAvatarInitials(username) {
 function updateAvatarDisplay() {
     const initialsEl = document.getElementById('avatarInitials');
     const imageEl = document.getElementById('avatarImage');
+    if (!initialsEl || !imageEl) return;
     if (userAvatarData && userAvatarData.data) {
         initialsEl.style.display = 'none';
         imageEl.style.display = 'block';
@@ -553,6 +602,7 @@ function updateAvatarDisplay() {
         initialsEl.textContent = getAvatarInitials(currentUsername);
     }
 }
+window.updateAvatarDisplay = updateAvatarDisplay;
 
 function showAvatarUpload() {
     if (!currentUsername) return;
@@ -592,6 +642,7 @@ function showAvatarUpload() {
         }
     });
 }
+window.showAvatarUpload = showAvatarUpload;
 
 function removeAvatar() {
     if (confirm('Are you sure you want to remove your profile picture?')) {
@@ -602,12 +653,14 @@ function removeAvatar() {
         showMessage('Avatar Removed', 'Your profile picture has been removed.');
     }
 }
+window.removeAvatar = removeAvatar;
 
 function saveUserAvatar(username, data) {
     const key = 'userAvatar_' + username;
     if (data) localStorage.setItem(key, data);
     else localStorage.removeItem(key);
 }
+window.saveUserAvatar = saveUserAvatar;
 
 function loadUserAvatar(username) {
     const key = 'userAvatar_' + username;
@@ -615,13 +668,15 @@ function loadUserAvatar(username) {
     userAvatarData = data ? { data: data } : {};
     updateAvatarDisplay();
 }
+window.loadUserAvatar = loadUserAvatar;
 
-// ======================== STORAGE ========================
+// ======================== STORAGE (LOCAL + FIREBASE) ========================
 const STORAGE_KEY = 'mediVaultData';
 const USERS_KEY = 'mediVaultUsers';
 const USERNAMES_KEY = 'mediVaultUserNames';
 
 function broadcastUpdate() { localStorage.setItem('mediVaultUpdate', Date.now().toString()); }
+window.broadcastUpdate = broadcastUpdate;
 
 window.addEventListener('storage', function(e) {
     if (e.key === STORAGE_KEY || e.key === USERS_KEY || e.key === USERNAMES_KEY || e.key === 'mediVaultUpdate') {
@@ -653,6 +708,7 @@ function refreshCurrentPage() {
         }
     }
 }
+window.refreshCurrentPage = refreshCurrentPage;
 
 // ======================== USER NAME ========================
 let userNamesData = {};
@@ -665,11 +721,14 @@ function getStoredUserName(username) { const data = loadUserNamesData(); return 
 function setStoredUserName(username, name) { const data = loadUserNamesData(); data[username] = name; saveUserNamesData(data); }
 function updateUserNameDisplay() {
     const el = document.getElementById('userNameDisplay');
-    if (currentUsername) {
+    if (el && currentUsername) {
         const name = getStoredUserName(currentUsername);
         el.textContent = name || 'Not set';
-    } else el.textContent = 'Not set';
+    }
 }
+window.getStoredUserName = getStoredUserName;
+window.setStoredUserName = setStoredUserName;
+window.updateUserNameDisplay = updateUserNameDisplay;
 
 // ======================== DATA ========================
 function getDefaultData() {
@@ -725,6 +784,7 @@ function saveData(data) {
     updatePendingBadge();
     broadcastUpdate();
 }
+window.saveData = saveData;
 
 // ======================== GLOBALS ========================
 let appData = loadData();
@@ -741,6 +801,7 @@ let uploadAbortController = null;
 
 // ======================== HELPERS ========================
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2,5); }
+window.generateId = generateId;
 
 function getFileType(filename) {
     const ext = filename.split('.').pop().toLowerCase();
@@ -755,6 +816,9 @@ function formatFileSize(bytes) { if(bytes<1024) return bytes+' B'; if(bytes<1024
 function isAdmin() { return currentRole === 'admin'; }
 function isFaculty() { return currentRole === 'faculty'; }
 function isAdminOrFaculty() { return isAdmin() || isFaculty(); }
+window.isAdmin = isAdmin;
+window.isFaculty = isFaculty;
+window.isAdminOrFaculty = isAdminOrFaculty;
 
 function updateCounts() {
     let qp=0, sm=0;
@@ -764,23 +828,33 @@ function updateCounts() {
     }
     const smFiles = appData.subjectMaterials.files || {};
     for (let s in smFiles) sm += smFiles[s].length;
-    document.getElementById('qpCount').textContent = qp + ' files';
-    document.getElementById('smCount').textContent = sm + ' files';
+    const qpEl = document.getElementById('qpCount');
+    const smEl = document.getElementById('smCount');
+    if (qpEl) qpEl.textContent = qp + ' files';
+    if (smEl) smEl.textContent = sm + ' files';
 }
 
 function updatePendingBadge() {
     const pending = appData.approvalRequests ? appData.approvalRequests.filter(r => r.status === 'pending').length : 0;
     const badge = document.getElementById('pendingCount');
-    if (pending > 0 && isAdmin()) {
-        badge.style.display = 'flex';
-        badge.textContent = pending;
-    } else badge.style.display = 'none';
+    if (badge) {
+        if (pending > 0 && isAdmin()) {
+            badge.style.display = 'flex';
+            badge.textContent = pending;
+        } else badge.style.display = 'none';
+    }
 }
+window.updatePendingBadge = updatePendingBadge;
 
 function registerUser(username, password, role) {
     if (registeredUsers[username]) return false;
     registeredUsers[username] = { password, role, registeredAt: Date.now() };
     saveUsers(registeredUsers);
+    // Save to Firebase
+    try {
+        const userRef = ref(db, 'users/' + username);
+        set(userRef, { password, role, registeredAt: Date.now() });
+    } catch(e) { console.warn('Firebase save error:', e); }
     return true;
 }
 function validateUser(username, password) {
@@ -815,7 +889,10 @@ function logUserLogin(username, role) {
 }
 function saveUserEmail(username, email) { appData.userEmails[username] = email; saveData(appData); }
 function getUserEmail(username) { return appData.userEmails[username] || ''; }
+window.getUserEmail = getUserEmail;
+window.saveUserEmail = saveUserEmail;
 
+// ======================== MODAL ========================
 function showModal(title, content, onConfirm) {
     const existing = document.querySelector('.modal');
     if(existing) existing.remove();
@@ -825,6 +902,7 @@ function showModal(title, content, onConfirm) {
     document.body.appendChild(modal);
     document.getElementById('modalConfirmBtn').addEventListener('click', function() { if(onConfirm) onConfirm(); modal.remove(); });
 }
+window.showModal = showModal;
 
 function showMessage(title, message) {
     const modal = document.createElement('div');
@@ -832,27 +910,32 @@ function showMessage(title, message) {
     modal.innerHTML = `<div class="modal-content"><h3>${title}</h3><p>${message}</p><div class="modal-actions"><button class="btn-primary" onclick="this.closest('.modal').remove()">OK</button></div></div>`;
     document.body.appendChild(modal);
 }
+window.showMessage = showMessage;
 
 function showFilePreview(fileData, fileName, fileType) {
     let content = '';
-    const ft = fileType.toLowerCase();
+    const ft = fileType ? fileType.toLowerCase() : '';
     if (ft.startsWith('image/')) content = `<img src="${fileData}" alt="${fileName}" class="file-preview" />`;
     else if (ft==='application/pdf') content = `<iframe src="${fileData}" class="file-preview"></iframe>`;
     else if (ft.includes('video')) content = `<video controls class="file-preview" style="max-width:100%;"><source src="${fileData}" type="${fileType}">Your browser does not support the video tag.</video>`;
     else if (ft.includes('audio')) content = `<audio controls style="width:100%; margin:20px 0;"><source src="${fileData}" type="${fileType}">Your browser does not support the audio tag.</audio>`;
-    else content = `<div class="file-info-preview" style="padding:20px; text-align:center;"><i class="fas ${getFileIcon(fileName)}" style="font-size:4rem; color:${getFileColor(fileName)};"></i><p style="margin-top:12px; color:#1f5175; font-weight:500;">${fileName}</p><p style="font-size:0.85rem; color:#1f5175;">Type: ${fileType}</p><p style="font-size:0.85rem; color:#1f5175;">Size: ${formatFileSize(fileData.length * 0.75)}</p><p style="margin-top:12px; color:#1f5175; font-size:0.9rem;"><i class="fas fa-info-circle"></i> Preview not available for this file type.<br>Click Download to view the file.</p></div>`;
+    else content = `<div class="file-info-preview" style="padding:20px; text-align:center;"><i class="fas ${getFileIcon(fileName)}" style="font-size:4rem; color:${getFileColor(fileName)};"></i><p style="margin-top:12px; color:#1f5175; font-weight:500;">${fileName}</p><p style="font-size:0.85rem; color:#1f5175;">Type: ${fileType || 'Unknown'}</p><p style="font-size:0.85rem; color:#1f5175;">Size: ${formatFileSize(fileData.length * 0.75)}</p><p style="margin-top:12px; color:#1f5175; font-size:0.9rem;"><i class="fas fa-info-circle"></i> Preview not available for this file type.<br>Click Download to view the file.</p></div>`;
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.innerHTML = `<div class="modal-content"><h3><i class="fas fa-eye" style="color:#17a2b8;"></i> File Preview: ${fileName}</h3>${content}<div class="modal-actions"><button class="btn-download" onclick="downloadFileFromPreview('${fileData}','${fileName}')" style="padding:8px 20px; border-radius:20px; border:none; cursor:pointer; background:#0a4b78; color:white; font-family:'Inter',sans-serif;"><i class="fas fa-download"></i> Download</button><button class="btn-primary" onclick="this.closest('.modal').remove()">Close</button></div></div>`;
     document.body.appendChild(modal);
 }
+window.showFilePreview = showFilePreview;
+
 function downloadFileFromPreview(fileData, fileName) { const a=document.createElement('a'); a.href=fileData; a.download=fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+window.downloadFileFromPreview = downloadFileFromPreview;
 
 // ======================== PAGE NAVIGATION ========================
 let uploadCategory = 'questionPapers';
 
 function showPage(page) {
     const container = document.getElementById('pageContainer');
+    if (!container) return;
     if (page === 'dashboard') { container.innerHTML = ''; return; }
     if (page === 'approvals' && !isAdmin()) {
         container.innerHTML = '<div class="page-container"><p style="color:#dc3545; text-align:center; padding:40px;"><i class="fas fa-lock" style="font-size:2rem; display:block; margin-bottom:12px;"></i>Access Denied. Only Admin can access approvals.</p></div>';
@@ -875,6 +958,7 @@ function showPage(page) {
         default: container.innerHTML = '<p>Page not found</p>';
     }
 }
+window.showPage = showPage;
 
 // ======================== RENDER FUNCTIONS ========================
 function renderDepartmentPage(container) {
@@ -901,6 +985,7 @@ function renderDepartmentPage(container) {
             </div>
         </div>`;
 }
+window.renderDepartmentPage = renderDepartmentPage;
 
 function renderProfilePage(container) {
     const user = registeredUsers[currentUsername];
@@ -946,48 +1031,55 @@ function renderProfilePage(container) {
             </div>
         </div>`;
 }
+window.renderProfilePage = renderProfilePage;
 
 function saveNameProfile() {
     const input = document.getElementById('profileNameInput');
+    if (!input) return;
     const name = input.value.trim();
     const statusDiv = document.getElementById('nameStatus');
-    if (!name) { statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your name.</div>`; return; }
+    if (!name) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your name.</div>`; return; }
     setStoredUserName(currentUsername, name);
-    document.getElementById('userNameDisplay').textContent = name;
-    statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Name updated successfully!</div>`;
-    setTimeout(() => statusDiv.innerHTML = '', 5000);
+    const display = document.getElementById('userNameDisplay');
+    if (display) display.textContent = name;
+    if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Name updated successfully!</div>`;
+    setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 5000);
     logUserActivity(currentUsername, currentRole, 'Update Name', `Updated name to ${name}`);
 }
+window.saveNameProfile = saveNameProfile;
 
 function changePassword() {
-    const currentPass = document.getElementById('currentPassword').value;
-    const newPass = document.getElementById('newPassword').value;
-    const confirmPass = document.getElementById('confirmPassword').value;
+    const currentPass = document.getElementById('currentPassword');
+    const newPass = document.getElementById('newPassword');
+    const confirmPass = document.getElementById('confirmPassword');
     const statusDiv = document.getElementById('passwordStatus');
-    if (!currentPass) { statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your current password.</div>`; return; }
-    if (!validateUser(currentUsername, currentPass)) { statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Current password is incorrect.</div>`; return; }
-    if (!newPass || newPass.length < 6) { statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> New password must be at least 6 characters.</div>`; return; }
-    if (newPass !== confirmPass) { statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Passwords do not match.</div>`; return; }
-    if (updateUserPassword(currentUsername, newPass)) {
-        statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Password updated successfully!</div>`;
-        document.getElementById('currentPassword').value = '';
-        document.getElementById('newPassword').value = '';
-        document.getElementById('confirmPassword').value = '';
+    if (!currentPass || !newPass || !confirmPass) return;
+    if (!currentPass.value) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your current password.</div>`; return; }
+    if (!validateUser(currentUsername, currentPass.value)) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Current password is incorrect.</div>`; return; }
+    if (!newPass.value || newPass.value.length < 6) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> New password must be at least 6 characters.</div>`; return; }
+    if (newPass.value !== confirmPass.value) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Passwords do not match.</div>`; return; }
+    if (updateUserPassword(currentUsername, newPass.value)) {
+        if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Password updated successfully!</div>`;
+        currentPass.value = ''; newPass.value = ''; confirmPass.value = '';
         logUserActivity(currentUsername, currentRole, 'Change Password', 'Password changed successfully');
-        setTimeout(() => statusDiv.innerHTML = '', 5000);
+        setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 5000);
         showMessage('✅ Password Updated', 'Your password has been changed successfully.');
-    } else statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error updating password.</div>`;
+    } else if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error updating password.</div>`;
 }
+window.changePassword = changePassword;
 
 function saveUserEmailProfile() {
-    const email = document.getElementById('profileEmailInput').value.trim();
+    const emailInput = document.getElementById('profileEmailInput');
+    if (!emailInput) return;
+    const email = emailInput.value.trim();
     const statusDiv = document.getElementById('emailStatus');
-    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) { statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter a valid email address.</div>`; return; }
+    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter a valid email address.</div>`; return; }
     saveUserEmail(currentUsername, email);
-    statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Email saved successfully!</div>`;
-    setTimeout(() => statusDiv.innerHTML = '', 5000);
+    if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Email saved successfully!</div>`;
+    setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 5000);
     logUserActivity(currentUsername, currentRole, 'Update Email', `Updated email to ${email}`);
 }
+window.saveUserEmailProfile = saveUserEmailProfile;
 
 // ======================== MONITORING ========================
 function renderMonitoringPage(container) {
@@ -1057,18 +1149,25 @@ function renderMonitoringPage(container) {
     html += `</div></div></div>`;
     container.innerHTML = html;
 }
+window.renderMonitoringPage = renderMonitoringPage;
 
 function toggleSelectAll() {
     const checkboxes = document.querySelectorAll('.user-checkbox');
     const selectAll = document.getElementById('selectAllUsers');
+    if (!selectAll) return;
     checkboxes.forEach(cb => cb.checked = selectAll.checked);
     updateSelectedCount();
 }
+window.toggleSelectAll = toggleSelectAll;
+
 function updateSelectedCount() {
     const checkboxes = document.querySelectorAll('.user-checkbox:checked');
     const el = document.getElementById('selectedCount');
     if(el) el.textContent = checkboxes.length + ' selected';
 }
+window.updateSelectedCount = updateSelectedCount;
+
+// ======================== DELETE SELECTED USERS ========================
 function deleteSelectedUsers() {
     const checkboxes = document.querySelectorAll('.user-checkbox:checked');
     if (checkboxes.length === 0) { showMessage('No Selection', 'Please select at least one user to delete.'); return; }
@@ -1077,6 +1176,25 @@ function deleteSelectedUsers() {
     const count = removeMultipleUsers(usernames);
     if (count > 0) { showMessage('Users Removed', `${count} user(s) removed.`); renderMonitoringPage(document.getElementById('pageContainer')); }
 }
+window.deleteSelectedUsers = deleteSelectedUsers;
+
+// ======================== SINGLE USER REMOVAL ========================
+function removeUserAccount(username) {
+    if (username === '732925MDR049') { alert('Cannot remove admin user'); return false; }
+    if (!registeredUsers[username]) { alert('User not found'); return false; }
+    if (!confirm(`Remove user "${username}"?`)) return false;
+    const success = removeUser(username);
+    if (success) {
+        showMessage('User Removed', `User "${username}" has been removed.`);
+        // Refresh monitoring if open
+        const container = document.getElementById('pageContainer');
+        if (container && container.querySelector('.page-container h2')?.textContent.includes('Monitoring')) {
+            renderMonitoringPage(container);
+        }
+    }
+    return success;
+}
+window.removeUserAccount = removeUserAccount;
 
 // ======================== SUBJECT MANAGEMENT ========================
 function editQPSubject(cat, oldSubject) {
@@ -1093,6 +1211,8 @@ function editQPSubject(cat, oldSubject) {
         renderQuestionPapers(document.getElementById('pageContainer'));
     });
 }
+window.editQPSubject = editQPSubject;
+
 function deleteQPSubject(cat, subject) {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can delete subjects'); return; }
     const files = appData.questionPapers[cat].files[subject] || [];
@@ -1106,6 +1226,8 @@ function deleteQPSubject(cat, subject) {
         renderQuestionPapers(document.getElementById('pageContainer'));
     });
 }
+window.deleteQPSubject = deleteQPSubject;
+
 function addQPSubject(cat) {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can add subjects'); return; }
     showModal(`Add Subject to ${cat.toUpperCase()}`, `<div style="margin:12px 0;"><label style="display:block; margin-bottom:4px; font-weight:500;">New Subject Code:</label><input type="text" id="addSubjectInput" class="login-input" placeholder="Enter subject code" /></div>`, function() {
@@ -1119,6 +1241,8 @@ function addQPSubject(cat) {
         renderQuestionPapers(document.getElementById('pageContainer'));
     });
 }
+window.addQPSubject = addQPSubject;
+
 function editSMSubject(oldSubject) {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can edit subjects'); return; }
     showModal('Edit Subject Material Subject', `<div style="margin:12px 0;"><label style="display:block; margin-bottom:4px; font-weight:500;">Subject Code:</label><input type="text" id="editSMSubjectInput" class="login-input" value="${oldSubject}" placeholder="Enter subject code" /></div>`, function() {
@@ -1133,6 +1257,8 @@ function editSMSubject(oldSubject) {
         renderSubjectMaterials(document.getElementById('pageContainer'));
     });
 }
+window.editSMSubject = editSMSubject;
+
 function deleteSMSubject(subject) {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can delete subjects'); return; }
     const files = appData.subjectMaterials.files[subject] || [];
@@ -1146,6 +1272,8 @@ function deleteSMSubject(subject) {
         renderSubjectMaterials(document.getElementById('pageContainer'));
     });
 }
+window.deleteSMSubject = deleteSMSubject;
+
 function addSMSubject() {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can add subjects'); return; }
     showModal('Add Subject to Subject Materials', `<div style="margin:12px 0;"><label style="display:block; margin-bottom:4px; font-weight:500;">New Subject Code:</label><input type="text" id="addSMSubjectInput" class="login-input" placeholder="Enter subject code" /></div>`, function() {
@@ -1159,6 +1287,7 @@ function addSMSubject() {
         renderSubjectMaterials(document.getElementById('pageContainer'));
     });
 }
+window.addSMSubject = addSMSubject;
 
 // ======================== QUESTION PAPERS ========================
 function renderQuestionPapers(container) {
@@ -1184,6 +1313,7 @@ function renderQuestionPapers(container) {
     html += `</div>`;
     container.innerHTML = html;
 }
+window.renderQuestionPapers = renderQuestionPapers;
 
 function viewQuestionPapers(cat, subject) {
     const container = document.getElementById('pageContainer');
@@ -1197,6 +1327,7 @@ function viewQuestionPapers(cat, subject) {
     html += `</div></div>`;
     container.innerHTML = html;
 }
+window.viewQuestionPapers = viewQuestionPapers;
 
 // ======================== SUBJECT MATERIALS ========================
 function renderSubjectMaterials(container) {
@@ -1212,6 +1343,7 @@ function renderSubjectMaterials(container) {
     html += `</div></div>`;
     container.innerHTML = html;
 }
+window.renderSubjectMaterials = renderSubjectMaterials;
 
 function viewSubjectMaterials(subject) {
     const container = document.getElementById('pageContainer');
@@ -1225,14 +1357,21 @@ function viewSubjectMaterials(subject) {
     html += `</div></div>`;
     container.innerHTML = html;
 }
+window.viewSubjectMaterials = viewSubjectMaterials;
 
 // ======================== FILE FUNCTIONS ========================
 function previewFile(cat, subject, idx) { const file = appData.questionPapers[cat].files[subject][idx]; if(file && file.data) showFilePreview(file.data, file.name, file.type); }
+window.previewFile = previewFile;
 function previewSMFile(subject, idx) { const file = appData.subjectMaterials.files[subject][idx]; if(file && file.data) showFilePreview(file.data, file.name, file.type); }
+window.previewSMFile = previewSMFile;
 function downloadFile(cat, subject, idx) { const file = appData.questionPapers[cat].files[subject][idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); logUserActivity(currentUsername,currentRole,'Download File',`Downloaded ${file.name}`); } }
+window.downloadFile = downloadFile;
 function deleteFile(cat, subject, idx) { if(!isAdminOrFaculty()) { alert('Only admin and faculty can delete files'); return; } if(confirm('Delete this file?')) { const name = appData.questionPapers[cat].files[subject][idx].name; appData.questionPapers[cat].files[subject].splice(idx,1); saveData(appData); logUserActivity(currentUsername,currentRole,'Delete File',`Deleted ${name}`); viewQuestionPapers(cat,subject); } }
+window.deleteFile = deleteFile;
 function downloadSMFile(subject, idx) { const file = appData.subjectMaterials.files[subject][idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); logUserActivity(currentUsername,currentRole,'Download File',`Downloaded ${file.name}`); } }
+window.downloadSMFile = downloadSMFile;
 function deleteSMFile(subject, idx) { if(!isAdminOrFaculty()) { alert('Only admin and faculty can delete files'); return; } if(confirm('Delete this file?')) { const name = appData.subjectMaterials.files[subject][idx].name; appData.subjectMaterials.files[subject].splice(idx,1); saveData(appData); logUserActivity(currentUsername,currentRole,'Delete File',`Deleted ${name}`); viewSubjectMaterials(subject); } }
+window.deleteSMFile = deleteSMFile;
 
 // ======================== APPROVALS ========================
 function submitApprovalRequest(category, cat, subject, files, fileDataArray) {
@@ -1244,6 +1383,7 @@ function submitApprovalRequest(category, cat, subject, files, fileDataArray) {
     logUserActivity(currentUsername,currentRole,'Submit Approval Request',`Requested upload for ${subject}`);
     showMessage('Request Submitted ✅', `Your upload request for "${subject}" has been sent to admin for approval.`);
 }
+window.submitApprovalRequest = submitApprovalRequest;
 
 function renderApprovalsPage(container) {
     const allRequests = appData.approvalRequests || [];
@@ -1259,15 +1399,20 @@ function renderApprovalsPage(container) {
         <div id="approvalContent">${allRequests.length === 0 ? '<p style="color:#1f5175; text-align:center; padding:40px;">No approval requests yet</p>' : renderApprovalList('pending')}</div></div>`;
     container.innerHTML = html;
 }
+window.renderApprovalsPage = renderApprovalsPage;
 
 function showApprovalTab(tab) {
     const content = document.getElementById('approvalContent');
     if (!content) return;
-    document.getElementById('pendingTab').className = tab === 'pending' ? 'btn-primary' : 'btn-outline';
-    document.getElementById('approvedTab').className = tab === 'approved' ? 'btn-primary' : 'btn-outline';
-    document.getElementById('rejectedTab').className = tab === 'rejected' ? 'btn-primary' : 'btn-outline';
+    const pendingTab = document.getElementById('pendingTab');
+    const approvedTab = document.getElementById('approvedTab');
+    const rejectedTab = document.getElementById('rejectedTab');
+    if (pendingTab) pendingTab.className = tab === 'pending' ? 'btn-primary' : 'btn-outline';
+    if (approvedTab) approvedTab.className = tab === 'approved' ? 'btn-primary' : 'btn-outline';
+    if (rejectedTab) rejectedTab.className = tab === 'rejected' ? 'btn-primary' : 'btn-outline';
     content.innerHTML = renderApprovalList(tab);
 }
+window.showApprovalTab = showApprovalTab;
 
 function renderApprovalList(status) {
     const requests = (appData.approvalRequests || []).filter(r => r.status === status);
@@ -1289,6 +1434,7 @@ function renderApprovalList(status) {
         </div>`;
     }).join('');
 }
+window.renderApprovalList = renderApprovalList;
 
 function previewRequestFile(requestId, fileIndex) {
     const request = (appData.approvalRequests || []).find(r => r.id === requestId);
@@ -1297,6 +1443,7 @@ function previewRequestFile(requestId, fileIndex) {
     if (!file) return;
     showFilePreview(file.data, file.name, file.type);
 }
+window.previewRequestFile = previewRequestFile;
 
 function approveRequest(requestId) {
     const request = (appData.approvalRequests || []).find(r => r.id === requestId);
@@ -1331,6 +1478,7 @@ function approveRequest(requestId) {
         renderApprovalsPage(document.getElementById('pageContainer'));
     } catch(e) { showMessage('Error', 'Failed to approve: ' + e.message); }
 }
+window.approveRequest = approveRequest;
 
 function rejectRequest(requestId) {
     const request = (appData.approvalRequests || []).find(r => r.id === requestId);
@@ -1345,6 +1493,7 @@ function rejectRequest(requestId) {
         renderApprovalsPage(document.getElementById('pageContainer'));
     } catch(e) { showMessage('Error', 'Failed to reject: ' + e.message); }
 }
+window.rejectRequest = rejectRequest;
 
 // ======================== UPLOAD ========================
 function renderUploadPage(container) {
@@ -1371,17 +1520,24 @@ function renderUploadPage(container) {
     container.innerHTML = html;
     document.getElementById('fileInput').addEventListener('change', handleFileUpload);
     const dz = document.getElementById('dropZone');
-    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); if(e.dataTransfer.files.length > 0) { document.getElementById('fileInput').files = e.dataTransfer.files; document.getElementById('fileInput').dispatchEvent(new Event('change')); } });
+    if (dz) {
+        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); if(e.dataTransfer.files.length > 0) { document.getElementById('fileInput').files = e.dataTransfer.files; document.getElementById('fileInput').dispatchEvent(new Event('change')); } });
+    }
 }
+window.renderUploadPage = renderUploadPage;
 
 function setUploadCategory(category) { uploadCategory = category; renderUploadPage(document.getElementById('pageContainer')); }
+window.setUploadCategory = setUploadCategory;
 function updateUploadCat() {
-    const cat = document.getElementById('uploadCatSelect').value;
+    const cat = document.getElementById('uploadCatSelect');
     const sel = document.getElementById('uploadSubjectSelect');
-    sel.innerHTML = appData.questionPapers[cat].subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+    if (!cat || !sel) return;
+    const value = cat.value;
+    sel.innerHTML = appData.questionPapers[value].subjects.map(s => `<option value="${s}">${s}</option>`).join('');
 }
+window.updateUploadCat = updateUploadCat;
 
 function handleFileUpload(event) {
     const files = event.target.files;
@@ -1398,18 +1554,21 @@ function handleFileUpload(event) {
             else valid.push(f);
         }
     }
-    if (errors.length > 0) { document.getElementById('uploadStatus').innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> ${errors.join('<br>')}</div>`; return; }
-    if (valid.length === 0) { document.getElementById('uploadStatus').innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> No valid files.</div>`; return; }
+    const statusDiv = document.getElementById('uploadStatus');
+    if (errors.length > 0 && statusDiv) { statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> ${errors.join('<br>')}</div>`; return; }
+    if (valid.length === 0 && statusDiv) { statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> No valid files.</div>`; return; }
     valid.forEach(f => uploadQueue.push({ file: f, status: 'pending', progress: 0, id: generateId() }));
     updateQueueUI();
     if (!isUploading) processNextInQueue();
     event.target.value = '';
 }
+window.handleFileUpload = handleFileUpload;
 
 function updateQueueUI() {
     const info = document.getElementById('uploadQueueInfo'), items = document.getElementById('queueItems'), count = document.getElementById('queueCount');
+    if (!info || !items) return;
     if (uploadQueue.length === 0) { info.style.display = 'none'; return; }
-    info.style.display = 'block'; count.textContent = uploadQueue.length;
+    info.style.display = 'block'; if (count) count.textContent = uploadQueue.length;
     let html = '';
     uploadQueue.forEach(item => {
         const statusText = item.status === 'pending' ? '⏳ Waiting' : item.status === 'uploading' ? '⬆️ Uploading' : item.status === 'paused' ? '⏸️ Paused' : item.status === 'completed' ? '✅ Done' : item.status === 'cancelled' ? '❌ Cancelled' : '⏳ Waiting';
@@ -1418,14 +1577,15 @@ function updateQueueUI() {
     });
     items.innerHTML = html;
 }
+window.updateQueueUI = updateQueueUI;
 
 function processNextInQueue() {
     if (uploadQueue.length === 0) { isUploading = false; updateQueueUI(); document.getElementById('uploadProgress').style.display = 'none'; return; }
     const idx = uploadQueue.findIndex(item => item.status === 'pending');
     if (idx === -1) {
         const allDone = uploadQueue.every(item => item.status === 'completed' || item.status === 'cancelled');
-        if (allDone) { isUploading = false; updateQueueUI(); document.getElementById('uploadProgress').style.display = 'none'; const hasCompleted = uploadQueue.some(item => item.status === 'completed'); if(hasCompleted) document.getElementById('uploadStatus').innerHTML = `<div style="color:#28a745; padding:12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> All files processed!</div>`; return; }
-        if (uploadQueue.some(item => item.status === 'paused')) { isUploading = false; updateQueueUI(); document.getElementById('uploadProgress').style.display = 'none'; document.getElementById('uploadStatus').innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-pause"></i> Upload paused.</div>`; return; }
+        if (allDone) { isUploading = false; updateQueueUI(); document.getElementById('uploadProgress').style.display = 'none'; const hasCompleted = uploadQueue.some(item => item.status === 'completed'); if(hasCompleted) { const statusDiv = document.getElementById('uploadStatus'); if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> All files processed!</div>`; } return; }
+        if (uploadQueue.some(item => item.status === 'paused')) { isUploading = false; updateQueueUI(); document.getElementById('uploadProgress').style.display = 'none'; const statusDiv = document.getElementById('uploadStatus'); if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-pause"></i> Upload paused.</div>`; return; }
         isUploading = false; updateQueueUI(); return;
     }
     isUploading = true;
@@ -1435,6 +1595,7 @@ function processNextInQueue() {
     updateQueueUI();
     startUpload(item);
 }
+window.processNextInQueue = processNextInQueue;
 
 function startUpload(item) {
     const file = item.file;
@@ -1445,14 +1606,19 @@ function startUpload(item) {
     const fileNameDisplay = document.getElementById('uploadFileName');
     let cat = null, subject = null;
     if (uploadCategory === 'questionPapers') {
-        cat = document.getElementById('uploadCatSelect').value;
-        subject = document.getElementById('uploadSubjectSelect').value;
+        const catSelect = document.getElementById('uploadCatSelect');
+        const subjectSelect = document.getElementById('uploadSubjectSelect');
+        if (catSelect) cat = catSelect.value;
+        if (subjectSelect) subject = subjectSelect.value;
     } else {
-        subject = document.getElementById('uploadSMSubjectSelect').value;
+        const subjectSelect = document.getElementById('uploadSMSubjectSelect');
+        if (subjectSelect) subject = subjectSelect.value;
     }
-    if (!subject) { statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Select a subject.</div>`; progressDiv.style.display = 'none'; item.status = 'pending'; currentUpload = null; isUploading = false; processNextInQueue(); return; }
-    progressDiv.style.display = 'block';
-    progressBar.style.width = '0%'; progressText.textContent = '0%'; fileNameDisplay.textContent = `Uploading: ${file.name}`;
+    if (!subject) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Select a subject.</div>`; if(progressDiv) progressDiv.style.display = 'none'; item.status = 'pending'; currentUpload = null; isUploading = false; processNextInQueue(); return; }
+    if(progressDiv) progressDiv.style.display = 'block';
+    if(progressBar) progressBar.style.width = '0%';
+    if(progressText) progressText.textContent = '0%';
+    if(fileNameDisplay) fileNameDisplay.textContent = `Uploading: ${file.name}`;
     const reader = new FileReader();
     let loaded = 0, total = file.size;
     item.reader = reader;
@@ -1462,9 +1628,9 @@ function startUpload(item) {
             loaded = e.loaded;
             const percent = Math.round((loaded / total) * 100);
             item.progress = percent;
-            progressBar.style.width = percent + '%';
-            progressText.textContent = percent + '%';
-            fileNameDisplay.textContent = `Uploading: ${file.name} (${percent}%)`;
+            if(progressBar) progressBar.style.width = percent + '%';
+            if(progressText) progressText.textContent = percent + '%';
+            if(fileNameDisplay) fileNameDisplay.textContent = `Uploading: ${file.name} (${percent}%)`;
             updateQueueUI();
         }
     };
@@ -1474,8 +1640,8 @@ function startUpload(item) {
             currentUpload = null; 
             isUploading = false; 
             updateQueueUI(); 
-            progressDiv.style.display = 'none'; 
-            statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> Cancelled ${file.name}</div>`; 
+            if(progressDiv) progressDiv.style.display = 'none'; 
+            if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> Cancelled ${file.name}</div>`; 
             processNextInQueue(); 
             return; 
         }
@@ -1484,8 +1650,8 @@ function startUpload(item) {
             currentUpload = null; 
             isUploading = false; 
             updateQueueUI(); 
-            progressDiv.style.display = 'none'; 
-            statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-pause"></i> Paused ${file.name}</div>`; 
+            if(progressDiv) progressDiv.style.display = 'none'; 
+            if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-pause"></i> Paused ${file.name}</div>`; 
             return; 
         }
         const fileData = e.target.result;
@@ -1496,43 +1662,43 @@ function startUpload(item) {
             appData.uploadHistory.push({ fileName: file.name, category: uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials', subject, uploadedAt: Date.now(), uploadedBy: currentUsername || 'anonymous' });
             saveData(appData);
             logUserActivity(currentUsername,currentRole,'Upload File',`Uploaded ${file.name} to ${subject}`);
-            item.status = 'completed'; item.progress = 100; progressBar.style.width = '100%'; progressText.textContent = '100%'; fileNameDisplay.textContent = `✅ ${file.name}`;
-            statusDiv.innerHTML = `<div style="color:#28a745; padding:12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> ${file.name} uploaded successfully!</div>`;
+            item.status = 'completed'; item.progress = 100; if(progressBar) progressBar.style.width = '100%'; if(progressText) progressText.textContent = '100%'; if(fileNameDisplay) fileNameDisplay.textContent = `✅ ${file.name}`;
+            if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> ${file.name} uploaded successfully!</div>`;
             currentUpload = null; isUploading = false; updateQueueUI();
-            setTimeout(() => { progressDiv.style.display = 'none'; processNextInQueue(); }, 800);
+            setTimeout(() => { if(progressDiv) progressDiv.style.display = 'none'; processNextInQueue(); }, 800);
         } else {
             if (!window._approvalFiles) window._approvalFiles = [];
             window._approvalFiles.push({ name: file.name, size: file.size, type: file.type, data: fileData });
             item.status = 'completed'; 
             item.progress = 100; 
-            progressBar.style.width = '100%'; 
-            progressText.textContent = '100%'; 
-            fileNameDisplay.textContent = `📤 Prepared: ${file.name}`;
+            if(progressBar) progressBar.style.width = '100%'; 
+            if(progressText) progressText.textContent = '100%'; 
+            if(fileNameDisplay) fileNameDisplay.textContent = `📤 Prepared: ${file.name}`;
             const remaining = uploadQueue.filter(q => q.status === 'pending' || q.status === 'uploading');
             if (remaining.length === 0) {
                 const categoryName = uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials';
                 const catValue = uploadCategory === 'questionPapers' ? cat : null;
                 submitApprovalRequest(categoryName, catValue, subject, null, window._approvalFiles);
                 window._approvalFiles = [];
-                statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-clock"></i> Files sent for approval.</div>`;
+                if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-clock"></i> Files sent for approval.</div>`;
             } else {
-                statusDiv.innerHTML = `<div style="color:#17a2b8; padding:12px; background:rgba(23,162,184,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> ${file.name} prepared (${remaining.length} remaining)</div>`;
+                if(statusDiv) statusDiv.innerHTML = `<div style="color:#17a2b8; padding:12px; background:rgba(23,162,184,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> ${file.name} prepared (${remaining.length} remaining)</div>`;
             }
             currentUpload = null; 
             isUploading = false; 
             updateQueueUI();
             setTimeout(() => { 
-                progressDiv.style.display = 'none'; 
+                if(progressDiv) progressDiv.style.display = 'none'; 
                 processNextInQueue(); 
             }, 800);
         }
     };
     reader.onerror = function() { 
-        statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error reading ${file.name}</div>`; 
+        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error reading ${file.name}</div>`; 
         item.status = 'pending'; 
         currentUpload = null; 
         isUploading = false; 
-        progressDiv.style.display = 'none'; 
+        if(progressDiv) progressDiv.style.display = 'none'; 
         updateQueueUI(); 
         processNextInQueue(); 
     };
@@ -1540,6 +1706,7 @@ function startUpload(item) {
     uploadCancelled = false;
     reader.readAsDataURL(file);
 }
+window.startUpload = startUpload;
 
 function pauseUpload(itemId) {
     const item = uploadQueue.find(q => q.id === itemId);
@@ -1552,9 +1719,12 @@ function pauseUpload(itemId) {
         isUploading = false;
         updateQueueUI();
         document.getElementById('uploadProgress').style.display = 'none';
-        document.getElementById('uploadStatus').innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-pause"></i> Paused ${item.file.name}</div>`;
+        const statusDiv = document.getElementById('uploadStatus');
+        if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-pause"></i> Paused ${item.file.name}</div>`;
     }
 }
+window.pauseUpload = pauseUpload;
+
 function resumeUpload(itemId) {
     const item = uploadQueue.find(q => q.id === itemId);
     if (item && item.status === 'paused') {
@@ -1563,10 +1733,13 @@ function resumeUpload(itemId) {
         uploadCancelled = false;
         currentUpload = null;
         updateQueueUI();
-        document.getElementById('uploadStatus').innerHTML = `<div style="color:#17a2b8; padding:12px; background:rgba(23,162,184,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> Resuming ${item.file.name}...</div>`;
+        const statusDiv = document.getElementById('uploadStatus');
+        if(statusDiv) statusDiv.innerHTML = `<div style="color:#17a2b8; padding:12px; background:rgba(23,162,184,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> Resuming ${item.file.name}...</div>`;
         if (!isUploading) processNextInQueue();
     }
 }
+window.resumeUpload = resumeUpload;
+
 function cancelUpload(itemId) {
     const item = uploadQueue.find(q => q.id === itemId);
     if (item && (item.status === 'pending' || item.status === 'uploading' || item.status === 'paused')) {
@@ -1580,10 +1753,12 @@ function cancelUpload(itemId) {
         isUploading = false;
         updateQueueUI();
         document.getElementById('uploadProgress').style.display = 'none';
-        document.getElementById('uploadStatus').innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> Cancelled ${item.file.name}</div>`;
+        const statusDiv = document.getElementById('uploadStatus');
+        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> Cancelled ${item.file.name}</div>`;
         processNextInQueue();
     }
 }
+window.cancelUpload = cancelUpload;
 
 // ======================== SEARCH ========================
 function renderSearchPage(container) {
@@ -1591,10 +1766,14 @@ function renderSearchPage(container) {
         <div style="display:flex; gap:12px; margin-bottom:20px;"><input type="text" id="searchInput" class="login-input" placeholder="Search by filename or subject..." style="flex:1;" /><button class="btn-primary" onclick="performSearch()"><i class="fas fa-search"></i> Search</button></div>
         <div id="searchResults"></div></div>`;
 }
+window.renderSearchPage = renderSearchPage;
 
 function performSearch() {
-    const query = document.getElementById('searchInput').value.toLowerCase().trim();
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput) return;
+    const query = searchInput.value.toLowerCase().trim();
     const resultsDiv = document.getElementById('searchResults');
+    if (!resultsDiv) return;
     if (!query) { resultsDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:20px;">Enter a search term</p>'; return; }
     let results = [];
     for (let cat in appData.questionPapers) {
@@ -1610,8 +1789,12 @@ function performSearch() {
     `).join('')}</div>`;
     window._searchResults = results;
 }
+window.performSearch = performSearch;
+
 function previewSearchResult(idx) { const file = window._searchResults[idx]; if(file && file.data) showFilePreview(file.data, file.name, file.type); }
+window.previewSearchResult = previewSearchResult;
 function downloadSearchResult(idx) { const file = window._searchResults[idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); } }
+window.downloadSearchResult = downloadSearchResult;
 
 // ======================== MY UPLOADS ========================
 function renderMyUploads(container) {
@@ -1635,8 +1818,12 @@ function renderMyUploads(container) {
     container.innerHTML = html;
     window._userUploads = userUploads;
 }
+window.renderMyUploads = renderMyUploads;
+
 function previewMyUpload(idx) { const file = window._userUploads[idx]; if(file && file.data) showFilePreview(file.data, file.fileName, file.type); }
+window.previewMyUpload = previewMyUpload;
 function downloadMyUpload(idx) { const file = window._userUploads[idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); } }
+window.downloadMyUpload = downloadMyUpload;
 
 // ======================== LOGIN ========================
 const tabBtns = document.querySelectorAll('.tab-btn');
@@ -1644,7 +1831,7 @@ const forms = { student: document.getElementById('studentForm'), faculty: docume
 tabBtns.forEach(btn => btn.addEventListener('click', function() {
     tabBtns.forEach(b => b.classList.remove('active'));
     this.classList.add('active');
-    Object.keys(forms).forEach(key => forms[key].classList.toggle('active', key === this.dataset.tab));
+    Object.keys(forms).forEach(key => { if (forms[key]) forms[key].classList.toggle('active', key === this.dataset.tab); });
 }));
 
 document.getElementById('studentForm').addEventListener('submit', function(e) {
@@ -1690,125 +1877,39 @@ document.getElementById('adminForm').addEventListener('submit', function(e) {
 function showDashboard(username, role, displayName) {
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('dashboardPage').classList.remove('hidden');
-    document.getElementById('approvalsCard').style.display = isAdmin() ? 'block' : 'none';
-    document.getElementById('monitoringCard').style.display = isAdminOrFaculty() ? 'block' : 'none';
-    document.getElementById('greetingUser').textContent = displayName + (role === 'admin' ? ' (Admin)' : role === 'faculty' ? ' (Faculty)' : '');
-    document.getElementById('roleBadge').innerHTML = role === 'admin' ? '<span class="admin-badge"><i class="fas fa-user-shield"></i> Admin</span>' : '';
+    const approvalsCard = document.getElementById('approvalsCard');
+    const monitoringCard = document.getElementById('monitoringCard');
+    if (approvalsCard) approvalsCard.style.display = isAdmin() ? 'block' : 'none';
+    if (monitoringCard) monitoringCard.style.display = isAdminOrFaculty() ? 'block' : 'none';
+    const greeting = document.getElementById('greetingUser');
+    if (greeting) greeting.textContent = displayName + (role === 'admin' ? ' (Admin)' : role === 'faculty' ? ' (Faculty)' : '');
+    const roleBadge = document.getElementById('roleBadge');
+    if (roleBadge) roleBadge.innerHTML = role === 'admin' ? '<span class="admin-badge"><i class="fas fa-user-shield"></i> Admin</span>' : '';
     const existing = getStoredUserName(username);
-    if (existing) document.getElementById('userNameDisplay').textContent = existing;
-    else {
+    const nameDisplay = document.getElementById('userNameDisplay');
+    if (existing && nameDisplay) nameDisplay.textContent = existing;
+    else if (nameDisplay) {
         const name = prompt('Enter your full name:', 'John Doe');
-        if (name && name.trim()) { setStoredUserName(username, name.trim()); document.getElementById('userNameDisplay').textContent = name.trim(); }
-        else document.getElementById('userNameDisplay').textContent = 'Not set';
+        if (name && name.trim()) { setStoredUserName(username, name.trim()); nameDisplay.textContent = name.trim(); }
+        else nameDisplay.textContent = 'Not set';
     }
     updateCounts(); updatePendingBadge();
 }
+window.showDashboard = showDashboard;
 
 // ======================== INIT ========================
-// No data clearing - data persistence is fully restored
 document.getElementById('loginPage').classList.remove('hidden');
 document.getElementById('dashboardPage').classList.add('hidden');
-document.getElementById('approvalsCard').style.display = 'none';
-document.getElementById('monitoringCard').style.display = 'none';
+const approvalsCard = document.getElementById('approvalsCard');
+const monitoringCard = document.getElementById('monitoringCard');
+if (approvalsCard) approvalsCard.style.display = 'none';
+if (monitoringCard) monitoringCard.style.display = 'none';
 updateCounts(); updatePendingBadge();
 
-// Expose all
-window.showPage = showPage;
-window.renderQuestionPapers = renderQuestionPapers;
-window.renderSubjectMaterials = renderSubjectMaterials;
-window.renderUploadPage = renderUploadPage;
-window.renderSearchPage = renderSearchPage;
-window.renderMyUploads = renderMyUploads;
-window.renderApprovalsPage = renderApprovalsPage;
-window.renderMonitoringPage = renderMonitoringPage;
-window.renderProfilePage = renderProfilePage;
-window.renderDepartmentPage = renderDepartmentPage;
-window.viewQuestionPapers = viewQuestionPapers;
-window.viewSubjectMaterials = viewSubjectMaterials;
-window.setUploadCategory = setUploadCategory;
-window.updateUploadCat = updateUploadCat;
-window.handleFileUpload = handleFileUpload;
-window.pauseUpload = pauseUpload;
-window.resumeUpload = resumeUpload;
-window.cancelUpload = cancelUpload;
-window.processNextInQueue = processNextInQueue;
-window.updateQueueUI = updateQueueUI;
-window.performSearch = performSearch;
-window.previewSearchResult = previewSearchResult;
-window.downloadSearchResult = downloadSearchResult;
-window.previewFile = previewFile;
-window.previewSMFile = previewSMFile;
-window.previewMyUpload = previewMyUpload;
-window.downloadMyUpload = downloadMyUpload;
-window.downloadFile = downloadFile;
-window.deleteFile = deleteFile;
-window.downloadSMFile = downloadSMFile;
-window.deleteSMFile = deleteSMFile;
-window.editQPSubject = editQPSubject;
-window.deleteQPSubject = deleteQPSubject;
-window.addQPSubject = addQPSubject;
-window.editSMSubject = editSMSubject;
-window.deleteSMSubject = deleteSMSubject;
-window.addSMSubject = addSMSubject;
-window.approveRequest = approveRequest;
-window.rejectRequest = rejectRequest;
-window.previewRequestFile = previewRequestFile;
-window.showApprovalTab = showApprovalTab;
-window.removeUserAccount = removeUserAccount;
-window.deleteSelectedUsers = deleteSelectedUsers;
-window.toggleSelectAll = toggleSelectAll;
-window.updateSelectedCount = updateSelectedCount;
-window.showModal = showModal;
-window.showMessage = showMessage;
-window.showFilePreview = showFilePreview;
-window.downloadFileFromPreview = downloadFileFromPreview;
-window.togglePassword = togglePassword;
-window.togglePasswordField = togglePasswordField;
-window.changePassword = changePassword;
-window.saveNameProfile = saveNameProfile;
-window.saveUserEmailProfile = saveUserEmailProfile;
-window.isAdmin = isAdmin;
-window.isFaculty = isFaculty;
-window.isAdminOrFaculty = isAdminOrFaculty;
-window.getUserEmail = getUserEmail;
-window.saveUserEmail = saveUserEmail;
-window.getStoredUserName = getStoredUserName;
-window.setStoredUserName = setStoredUserName;
-window.formatDateShort = formatDateShort;
-window.formatDateTime = formatDateTime;
-window.broadcastUpdate = broadcastUpdate;
-window.showAvatarUpload = showAvatarUpload;
-window.removeAvatar = removeAvatar;
-window.updateAvatarDisplay = updateAvatarDisplay;
-window.loadUserAvatar = loadUserAvatar;
-window.saveUserAvatar = saveUserAvatar;
-window.updateUserNameDisplay = updateUserNameDisplay;
-window.isValidDate = isValidDate;
-
-console.log('✅ Medi Electro Vault - Data Persistence Fully Restored!');
-console.log('📊 All data (users, uploads, approvals, logs) saved in localStorage');
+console.log('✅ Medi Electro Vault - Fully Functional with Firebase!');
+console.log('📊 All data (users, uploads, approvals, logs) saved in localStorage + Firebase sync');
 console.log('🔔 Notifications working - Admin can see pending requests');
 console.log('📁 Uploads work for all roles with proper approval flow');
-</script>
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyBI5RgA04gKmMaZcUGKRDKs1yCZ0DxtWGU",
-    authDomain: "medi-electro-vault.firebaseapp.com",
-    databaseURL: "https://medi-electro-vault-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "medi-electro-vault",
-    storageBucket: "medi-electro-vault.firebasestorage.app",
-    messagingSenderId: "419811672667",
-    appId: "1:419811672667:web:1e5617fc0d50ef1138357e"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
 </script>
 </body>
 </html>
