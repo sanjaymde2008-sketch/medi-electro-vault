@@ -512,6 +512,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
+import { ref, set } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+
+window.testFirebase = async function () {
+    try {
+        await set(ref(db, "test"), {
+            message: "Hello Firebase!",
+            time: new Date().toString()
+        });
+
+        alert("✅ Firebase Connected Successfully!");
+    } catch (err) {
+        console.error(err);
+        alert("❌ Firebase Error: " + err.message);
+    }
+};
 const storage = getStorage(app);
 
 // Export for global use
@@ -1017,7 +1032,7 @@ function renderProfilePage(container) {
             <div class="profile-section">
                 <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-key" style="color:#0a4b78;"></i> Change Password</h3>
                 <p style="color:#1f5175; font-size:0.9rem; margin-bottom:12px;">Enter your current password and choose a new password.</p>
-                <div style="margin-bottom:12px;"><label style="font-weight:500; display:block; margin-bottom:4px; color:#0a2b48;">Current Password</label><div class="password-field"><input type="password" id="currentPassword" class="login-input" placeholder="Enter current password" style="padding-right:40px;" /><button type="button" class="eye-btn-small" onclick="togglePasswordField('currentPassword')"><i class="fas fa-eye"></i></button></div></div>
+                <div style="margin-bottom:12px;"><label style="font-weight:500; display:block; margin-bottom:4px; color:#0a2b48;">Current Password</label><div class="password-field"><input type="password" id="currentPassword" class="login-input" placeholder="Enter current password" style="padding-right:40px;" />SS="button" class="eye-btn-small" onclick="togglePasswordField('currentPassword')"><i class="fas fa-eye"></i></button></div></div>
                 <div style="margin-bottom:12px;"><label style="font-weight:500; display:block; margin-bottom:4px; color:#0a2b48;">New Password</label><div class="password-field"><input type="password" id="newPassword" class="login-input" placeholder="Enter new password" style="padding-right:40px;" /><button type="button" class="eye-btn-small" onclick="togglePasswordField('newPassword')"><i class="fas fa-eye"></i></button></div></div>
                 <div style="margin-bottom:12px;"><label style="font-weight:500; display:block; margin-bottom:4px; color:#0a2b48;">Confirm New Password</label><div class="password-field"><input type="password" id="confirmPassword" class="login-input" placeholder="Confirm new password" style="padding-right:40px;" /><button type="button" class="eye-btn-small" onclick="togglePasswordField('confirmPassword')"><i class="fas fa-eye"></i></button></div></div>
                 <button class="btn-primary" onclick="changePassword()"><i class="fas fa-save"></i> Update Password</button>
