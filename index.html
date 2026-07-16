@@ -8,6 +8,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    
+    <!-- Step 1: Add Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -292,6 +296,23 @@
         .admin-actions button:hover { transform: scale(1.05); }
         .subject-select { width: 100%; padding: 12px 20px; border-radius: 40px; border: 1px solid rgba(0,50,90,0.15); background: rgba(255,255,255,0.6); font-size: 1rem; transition: all 0.3s; margin-top: 4px; }
         .subject-select:focus { outline: 2px solid #1f7ea3; background: white; box-shadow: 0 0 20px rgba(31, 126, 163, 0.15); }
+        .supabase-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .supabase-status.connected {
+            background: rgba(40, 167, 69, 0.15);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+        .supabase-status.disconnected {
+            background: rgba(220, 53, 69, 0.15);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
         @media (max-width: 650px) {
             .portal { padding: 18px; }
             .login-card { padding: 28px 20px; }
@@ -409,6 +430,7 @@
                     <span class="dot"></span> Real-time Connected
                 </span>
                 <span class="badge"><i class="fas fa-shield-alt"></i> MED</span>
+                <span class="supabase-status" id="supabaseStatus">⏳ Connecting...</span>
                 <button class="dept-icon-btn" onclick="showPage('department')" style="margin-left:4px;">
                     <i class="fas fa-university"></i> 
                     <span style="font-size:0.7rem;">About Dept</span>
@@ -477,51 +499,76 @@
     </div>
 </div>
 
-<!-- Firebase SDK -->
-<script type="importmap">
-{
-  "imports": {
-    "firebase/app": "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js",
-    "firebase/auth": "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js",
-    "firebase/database": "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js",
-    "firebase/storage": "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js"
-  }
+<!-- ============================================================ -->
+<!-- STEP 2: Supabase Client Connection File (supabase.js)        -->
+<!-- ============================================================ -->
+<script>
+// Supabase Configuration - Replace with your actual publishable key
+const SUPABASE_URL = 'https://apxinpazvkvgujcvruod.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'YOUR_PUBLISHABLE_KEY_HERE'; // <-- PASTE YOUR KEY HERE
+
+// Initialize Supabase Client
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Make it globally accessible
+window.supabaseClient = supabaseClient;
+
+// Test Connection
+async function testSupabaseConnection() {
+    try {
+        console.log('🔄 Testing Supabase connection...');
+        
+        // Try to fetch from a table or just check if connection works
+        const { data, error } = await supabaseClient
+            .from('files')
+            .select('count', { count: 'exact', head: true });
+        
+        if (error) {
+            console.error('❌ Supabase connection test failed:', error);
+            return false;
+        }
+        
+        console.log('✅ Supabase Connected Successfully!');
+        console.log('📊 Database connection verified');
+        return true;
+    } catch (err) {
+        console.error('❌ Supabase connection error:', err);
+        return false;
+    }
 }
+
+// Update status indicator
+async function updateSupabaseStatus() {
+    const statusEl = document.getElementById('supabaseStatus');
+    if (!statusEl) return;
+    
+    const connected = await testSupabaseConnection();
+    
+    if (connected) {
+        statusEl.textContent = '✅ Supabase Connected';
+        statusEl.className = 'supabase-status connected';
+    } else {
+        statusEl.textContent = '❌ Supabase Disconnected';
+        statusEl.className = 'supabase-status disconnected';
+    }
+}
+
+// Run on page load
+setTimeout(updateSupabaseStatus, 1000);
+
+// Export for use in other functions
+window.testSupabaseConnection = testSupabaseConnection;
+window.updateSupabaseStatus = updateSupabaseStatus;
+
+console.log('📁 Supabase client initialized');
 </script>
-<script type="module">
-import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { getDatabase, ref, set, get, child, push, update, remove, onValue } from "firebase/database";
-import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
-// Firebase Configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyBI5RgA04gKmMaZcUGKRDKs1yCZ0DxtWGU",
-    authDomain: "medi-electro-vault.firebaseapp.com",
-    databaseURL: "https://medi-electro-vault-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "medi-electro-vault",
-    storageBucket: "medi-electro-vault.firebasestorage.app",
-    messagingSenderId: "419811672667",
-    appId: "1:419811672667:web:1e5617fc0d50ef1138357e"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
-const storage = getStorage(app);
-
-// Export for global use
-window.firebaseApp = app;
-window.firebaseAuth = auth;
-window.firebaseDb = db;
-window.firebaseStorage = storage;
-window.firebaseRef = ref;
-window.firebaseSet = set;
-window.firebaseGet = get;
-
+<!-- ============================================================ -->
+<!-- STEP 3: Main Application JavaScript                          -->
+<!-- ============================================================ -->
+<script>
 // ============================================================
-//  COMPLETE JAVASCRIPT - FULL DATA PERSISTENCE + FIREBASE
+//  COMPLETE APPLICATION LOGIC
 // ============================================================
 
 // ======================== PASSWORD TOGGLE ========================
@@ -672,7 +719,7 @@ function loadUserAvatar(username) {
 }
 window.loadUserAvatar = loadUserAvatar;
 
-// ======================== STORAGE (LOCAL + FIREBASE) ========================
+// ======================== STORAGE ========================
 const STORAGE_KEY = 'mediVaultData';
 const USERS_KEY = 'mediVaultUsers';
 const USERNAMES_KEY = 'mediVaultUserNames';
@@ -852,11 +899,6 @@ function registerUser(username, password, role) {
     if (registeredUsers[username]) return false;
     registeredUsers[username] = { password, role, registeredAt: Date.now() };
     saveUsers(registeredUsers);
-    // Save to Firebase
-    try {
-        const userRef = ref(db, 'users/' + username);
-        set(userRef, { password, role, registeredAt: Date.now() });
-    } catch(e) { console.warn('Firebase save error:', e); }
     return true;
 }
 function validateUser(username, password) {
@@ -893,6 +935,242 @@ function saveUserEmail(username, email) { appData.userEmails[username] = email; 
 function getUserEmail(username) { return appData.userEmails[username] || ''; }
 window.getUserEmail = getUserEmail;
 window.saveUserEmail = saveUserEmail;
+
+// ======================== SUPABASE UPLOAD FUNCTIONS ========================
+
+/**
+ * Upload a file to Supabase Storage and save metadata to the database
+ * @param {File} file - The file to upload
+ * @param {string} subject - The subject code
+ * @param {string} uploadedBy - The username of the uploader
+ * @param {function} onProgress - Progress callback (0-100)
+ * @returns {Promise<Object>} - Result of the upload
+ */
+async function uploadToSupabase(file, subject, uploadedBy, onProgress) {
+    try {
+        // Step 1: Upload file to Supabase Storage
+        const filePath = `${Date.now()}_${file.name}`;
+        const { data: uploadData, error: uploadError } = await supabaseClient
+            .storage
+            .from('pdf-files')
+            .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false,
+                onProgress: (progress) => {
+                    if (onProgress) {
+                        const percent = Math.round((progress.loaded / progress.total) * 100);
+                        onProgress(percent);
+                    }
+                }
+            });
+
+        if (uploadError) {
+            console.error('❌ Supabase Storage Upload Error:', uploadError);
+            return { success: false, error: uploadError.message };
+        }
+
+        console.log('✅ File uploaded to Supabase Storage:', filePath);
+
+        // Step 2: Get public URL
+        const { data: urlData } = supabaseClient
+            .storage
+            .from('pdf-files')
+            .getPublicUrl(filePath);
+
+        const fileUrl = urlData.publicUrl;
+
+        // Step 3: Save file metadata to Supabase Database
+        const { data: dbData, error: dbError } = await supabaseClient
+            .from('files')
+            .insert([
+                {
+                    file_name: file.name,
+                    subject: subject,
+                    uploaded_by: uploadedBy || 'anonymous',
+                    file_path: filePath,
+                    file_url: fileUrl,
+                    file_size: file.size,
+                    uploaded_at: new Date().toISOString()
+                }
+            ]);
+
+        if (dbError) {
+            console.error('❌ Supabase Database Insert Error:', dbError);
+            return { success: false, error: dbError.message };
+        }
+
+        console.log('✅ File metadata saved to Supabase Database');
+        console.log('📊 File details:', dbData);
+
+        return { 
+            success: true, 
+            data: { 
+                uploadData, 
+                dbData, 
+                fileUrl,
+                filePath 
+            } 
+        };
+
+    } catch (err) {
+        console.error('❌ Supabase Upload Error:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Upload multiple files to Supabase
+ */
+async function uploadMultipleToSupabase(files, subject, uploadedBy, onFileComplete) {
+    const results = [];
+    const totalFiles = files.length;
+    let completedFiles = 0;
+
+    for (let i = 0; i < totalFiles; i++) {
+        const file = files[i];
+        const result = await uploadToSupabase(file, subject, uploadedBy, (progress) => {
+            // Update progress for this specific file
+            if (onFileComplete) {
+                onFileComplete(i, totalFiles, progress);
+            }
+        });
+
+        results.push({
+            file: file.name,
+            ...result
+        });
+
+        completedFiles++;
+        if (onFileComplete) {
+            onFileComplete(i, totalFiles, 100);
+        }
+    }
+
+    return results;
+}
+
+// Expose Supabase upload functions globally
+window.uploadToSupabase = uploadToSupabase;
+window.uploadMultipleToSupabase = uploadMultipleToSupabase;
+
+// ======================== MODIFIED UPLOAD FUNCTION WITH SUPABASE ========================
+
+// Override the upload handler to use Supabase
+function handleSupabaseUpload(files, subject) {
+    const statusDiv = document.getElementById('uploadStatus');
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const fileNameDisplay = document.getElementById('uploadFileName');
+
+    if (!files || files.length === 0) {
+        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> No files selected.</div>`;
+        return;
+    }
+
+    // Validate file types
+    let validFiles = [];
+    let errors = [];
+
+    for (let f of files) {
+        if (f.type === 'application/pdf') {
+            validFiles.push(f);
+        } else if (uploadCategory === 'questionPapers' && f.type.startsWith('image/')) {
+            validFiles.push(f);
+        } else {
+            errors.push(`${f.name} is not a valid file type.`);
+        }
+    }
+
+    if (errors.length > 0 && statusDiv) {
+        statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> ${errors.join('<br>')}</div>`;
+    }
+
+    if (validFiles.length === 0) {
+        if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> No valid files to upload.</div>`;
+        return;
+    }
+
+    // Show progress
+    if(progressDiv) progressDiv.style.display = 'block';
+    if(progressBar) progressBar.style.width = '0%';
+    if(progressText) progressText.textContent = '0%';
+    if(fileNameDisplay) fileNameDisplay.textContent = `Uploading to Supabase...`;
+
+    // Upload to Supabase
+    uploadMultipleToSupabase(
+        validFiles, 
+        subject, 
+        currentUsername || 'anonymous',
+        (fileIndex, totalFiles, progress) => {
+            // Update progress bar
+            const overallProgress = Math.round(((fileIndex) / totalFiles) * 100 + (progress / totalFiles));
+            if(progressBar) progressBar.style.width = overallProgress + '%';
+            if(progressText) progressText.textContent = overallProgress + '%';
+            if(fileNameDisplay) fileNameDisplay.textContent = `Uploading ${fileIndex + 1}/${totalFiles} (${progress}%)`;
+        }
+    ).then(results => {
+        // Process results
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.filter(r => !r.success).length;
+
+        if(progressDiv) progressDiv.style.display = 'none';
+
+        if (successCount > 0) {
+            // Add to local appData for display
+            validFiles.forEach((file, idx) => {
+                if (results[idx] && results[idx].success) {
+                    const fileObj = { 
+                        id: generateId(), 
+                        name: file.name, 
+                        size: file.size, 
+                        type: file.type, 
+                        data: results[idx].data.fileUrl, // Store URL
+                        uploadedAt: Date.now(), 
+                        uploadedBy: currentUsername || 'anonymous',
+                        supabasePath: results[idx].data.filePath
+                    };
+                    
+                    // Save to local storage
+                    if (uploadCategory === 'questionPapers') {
+                        const cat = document.getElementById('uploadCatSelect')?.value || 'cat1';
+                        const subject = document.getElementById('uploadSubjectSelect')?.value || '';
+                        if(!appData.questionPapers[cat].files[subject]) appData.questionPapers[cat].files[subject] = [];
+                        appData.questionPapers[cat].files[subject].push(fileObj);
+                    } else {
+                        const subject = document.getElementById('uploadSMSubjectSelect')?.value || '';
+                        if(!appData.subjectMaterials.files[subject]) appData.subjectMaterials.files[subject] = [];
+                        appData.subjectMaterials.files[subject].push(fileObj);
+                    }
+                    
+                    appData.uploadHistory.push({ 
+                        fileName: file.name, 
+                        category: uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials', 
+                        subject, 
+                        uploadedAt: Date.now(), 
+                        uploadedBy: currentUsername || 'anonymous' 
+                    });
+                }
+            });
+
+            saveData(appData);
+            
+            let message = `✅ ${successCount} file(s) uploaded successfully to Supabase!`;
+            if (failCount > 0) {
+                message += ` ⚠️ ${failCount} file(s) failed.`;
+            }
+            if(statusDiv) statusDiv.innerHTML = `<div style="color:${failCount > 0 ? '#ffc107' : '#28a745'}; padding:12px; background:rgba(${failCount > 0 ? '255,193,7' : '40,167,69'},0.1); border-radius:12px;"><i class="fas ${failCount > 0 ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${message}</div>`;
+            logUserActivity(currentUsername, currentRole, 'Upload to Supabase', `Uploaded ${successCount} file(s) to ${subject}`);
+        } else {
+            if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> ❌ Upload failed. Check console for details.</div>`;
+            console.error('Upload results:', results);
+        }
+    }).catch(err => {
+        if(progressDiv) progressDiv.style.display = 'none';
+        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> ❌ Upload error: ${err.message}</div>`;
+        console.error('Upload error:', err);
+    });
+}
 
 // ======================== MODAL ========================
 function showModal(title, content, onConfirm) {
@@ -1169,7 +1447,6 @@ function updateSelectedCount() {
 }
 window.updateSelectedCount = updateSelectedCount;
 
-// ======================== DELETE SELECTED USERS ========================
 function deleteSelectedUsers() {
     const checkboxes = document.querySelectorAll('.user-checkbox:checked');
     if (checkboxes.length === 0) { showMessage('No Selection', 'Please select at least one user to delete.'); return; }
@@ -1180,7 +1457,6 @@ function deleteSelectedUsers() {
 }
 window.deleteSelectedUsers = deleteSelectedUsers;
 
-// ======================== SINGLE USER REMOVAL ========================
 function removeUserAccount(username) {
     if (username === '732925MDR049') { alert('Cannot remove admin user'); return false; }
     if (!registeredUsers[username]) { alert('User not found'); return false; }
@@ -1188,7 +1464,6 @@ function removeUserAccount(username) {
     const success = removeUser(username);
     if (success) {
         showMessage('User Removed', `User "${username}" has been removed.`);
-        // Refresh monitoring if open
         const container = document.getElementById('pageContainer');
         if (container && container.querySelector('.page-container h2')?.textContent.includes('Monitoring')) {
             renderMonitoringPage(container);
@@ -1515,23 +1790,65 @@ function renderUploadPage(container) {
             <p style="color:#1f5175; font-size:0.85rem;"><i class="fas fa-info-circle"></i> PDF and documents accepted.</p>`;
     }
     html += `</div>
-        <div class="file-upload-area" id="dropZone"><i class="fas fa-cloud-upload-alt" style="font-size:3rem; color:#0a4b78;"></i><p style="margin:12px 0; color:#1f5175;">📁 Drag & drop or click to browse</p><input type="file" id="fileInput" multiple style="display:none;" /><button class="btn-primary" onclick="document.getElementById('fileInput').click()"><i class="fas fa-folder-open"></i> Browse Files</button></div>
+        <div class="file-upload-area" id="dropZone"><i class="fas fa-cloud-upload-alt" style="font-size:3rem; color:#0a4b78;"></i><p style="margin:12px 0; color:#1f5175;">📁 Drag & drop or click to browse</p>
+        <p style="font-size:0.8rem; color:#0a4b78; margin-bottom:8px;"><i class="fas fa-database"></i> Files will be uploaded to Supabase</p>
+        <input type="file" id="fileInput" multiple style="display:none;" /><button class="btn-primary" onclick="document.getElementById('fileInput').click()"><i class="fas fa-folder-open"></i> Browse Files</button></div>
         <div id="uploadStatus" style="margin-top:12px;"></div>
         <div id="uploadProgress" style="display:none; margin-top:12px;"><div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#1f5175;"><span id="uploadFileName">Preparing...</span><span id="progressText">0%</span></div><div class="upload-progress"><div class="upload-progress-bar" id="progressBar" style="width:0%;"></div></div></div>
         <div id="uploadQueueContainer" style="margin-top:12px;"><div id="uploadQueueInfo" style="display:none;"><p style="font-size:0.85rem; color:#1f5175; margin-bottom:8px;"><i class="fas fa-list"></i> <span id="queueCount">0</span> files in queue</p><div id="queueItems"></div></div></div></div>`;
     container.innerHTML = html;
-    document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+    
+    // Replace the file input handler with Supabase upload
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        fileInput.removeEventListener('change', handleFileUpload);
+        fileInput.addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            
+            // Get subject
+            let subject = '';
+            if (uploadCategory === 'questionPapers') {
+                const subjectSelect = document.getElementById('uploadSubjectSelect');
+                if (subjectSelect) subject = subjectSelect.value;
+            } else {
+                const subjectSelect = document.getElementById('uploadSMSubjectSelect');
+                if (subjectSelect) subject = subjectSelect.value;
+            }
+            
+            if (!subject) {
+                const statusDiv = document.getElementById('uploadStatus');
+                if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please select a subject first.</div>`;
+                return;
+            }
+            
+            handleSupabaseUpload(files, subject);
+            e.target.value = '';
+        });
+    }
+    
     const dz = document.getElementById('dropZone');
     if (dz) {
         dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
         dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-        dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); if(e.dataTransfer.files.length > 0) { document.getElementById('fileInput').files = e.dataTransfer.files; document.getElementById('fileInput').dispatchEvent(new Event('change')); } });
+        dz.addEventListener('drop', e => { 
+            e.preventDefault(); 
+            dz.classList.remove('dragover'); 
+            if(e.dataTransfer.files.length > 0) { 
+                const fileInput = document.getElementById('fileInput');
+                if (fileInput) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileInput.dispatchEvent(new Event('change'));
+                }
+            } 
+        });
     }
 }
 window.renderUploadPage = renderUploadPage;
 
 function setUploadCategory(category) { uploadCategory = category; renderUploadPage(document.getElementById('pageContainer')); }
 window.setUploadCategory = setUploadCategory;
+
 function updateUploadCat() {
     const cat = document.getElementById('uploadCatSelect');
     const sel = document.getElementById('uploadSubjectSelect');
@@ -1541,224 +1858,61 @@ function updateUploadCat() {
 }
 window.updateUploadCat = updateUploadCat;
 
+// Keep original handler for backward compatibility
 function handleFileUpload(event) {
+    // This is now replaced by Supabase upload
     const files = event.target.files;
     if (!files || files.length === 0) return;
-    const errors = [], valid = [];
+    
+    let subject = '';
     if (uploadCategory === 'questionPapers') {
-        for (let f of files) {
-            if (!f.type.startsWith('image/') && f.type !== 'application/pdf') errors.push(`${f.name} is not an image or PDF.`);
-            else valid.push(f);
-        }
-    } else {
-        for (let f of files) {
-            if (f.type.startsWith('image/')) errors.push(`${f.name} is an image. Only PDF and documents allowed.`);
-            else valid.push(f);
-        }
-    }
-    const statusDiv = document.getElementById('uploadStatus');
-    if (errors.length > 0 && statusDiv) { statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> ${errors.join('<br>')}</div>`; return; }
-    if (valid.length === 0 && statusDiv) { statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> No valid files.</div>`; return; }
-    valid.forEach(f => uploadQueue.push({ file: f, status: 'pending', progress: 0, id: generateId() }));
-    updateQueueUI();
-    if (!isUploading) processNextInQueue();
-    event.target.value = '';
-}
-window.handleFileUpload = handleFileUpload;
-
-function updateQueueUI() {
-    const info = document.getElementById('uploadQueueInfo'), items = document.getElementById('queueItems'), count = document.getElementById('queueCount');
-    if (!info || !items) return;
-    if (uploadQueue.length === 0) { info.style.display = 'none'; return; }
-    info.style.display = 'block'; if (count) count.textContent = uploadQueue.length;
-    let html = '';
-    uploadQueue.forEach(item => {
-        const statusText = item.status === 'pending' ? '⏳ Waiting' : item.status === 'uploading' ? '⬆️ Uploading' : item.status === 'paused' ? '⏸️ Paused' : item.status === 'completed' ? '✅ Done' : item.status === 'cancelled' ? '❌ Cancelled' : '⏳ Waiting';
-        html += `<div class="upload-queue-item" id="queue-item-${item.id}"><div class="queue-status"><span>${statusText}</span><span style="font-weight:500; margin-left:8px;">${item.file.name}</span><span style="font-size:0.7rem; color:#1f5175;">${formatFileSize(item.file.size)}</span>${item.status === 'uploading' || item.status === 'paused' ? `<span style="font-size:0.7rem; color:#1f5175;">${item.progress}%</span>` : ''}</div>
-            <div class="queue-actions">${item.status === 'uploading' ? `<button class="pause-btn" onclick="pauseUpload('${item.id}')">⏸️ Pause</button>` : ''}${item.status === 'paused' ? `<button class="resume-btn" onclick="resumeUpload('${item.id}')">▶️ Resume</button>` : ''}${(item.status === 'pending' || item.status === 'uploading' || item.status === 'paused') ? `<button class="cancel-btn" onclick="cancelUpload('${item.id}')">✖️ Cancel</button>` : ''}</div></div>`;
-    });
-    items.innerHTML = html;
-}
-window.updateQueueUI = updateQueueUI;
-
-function processNextInQueue() {
-    if (uploadQueue.length === 0) { isUploading = false; updateQueueUI(); document.getElementById('uploadProgress').style.display = 'none'; return; }
-    const idx = uploadQueue.findIndex(item => item.status === 'pending');
-    if (idx === -1) {
-        const allDone = uploadQueue.every(item => item.status === 'completed' || item.status === 'cancelled');
-        if (allDone) { isUploading = false; updateQueueUI(); document.getElementById('uploadProgress').style.display = 'none'; const hasCompleted = uploadQueue.some(item => item.status === 'completed'); if(hasCompleted) { const statusDiv = document.getElementById('uploadStatus'); if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> All files processed!</div>`; } return; }
-        if (uploadQueue.some(item => item.status === 'paused')) { isUploading = false; updateQueueUI(); document.getElementById('uploadProgress').style.display = 'none'; const statusDiv = document.getElementById('uploadStatus'); if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-pause"></i> Upload paused.</div>`; return; }
-        isUploading = false; updateQueueUI(); return;
-    }
-    isUploading = true;
-    const item = uploadQueue[idx];
-    item.status = 'uploading';
-    currentUpload = item;
-    updateQueueUI();
-    startUpload(item);
-}
-window.processNextInQueue = processNextInQueue;
-
-function startUpload(item) {
-    const file = item.file;
-    const statusDiv = document.getElementById('uploadStatus');
-    const progressDiv = document.getElementById('uploadProgress');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    const fileNameDisplay = document.getElementById('uploadFileName');
-    let cat = null, subject = null;
-    if (uploadCategory === 'questionPapers') {
-        const catSelect = document.getElementById('uploadCatSelect');
         const subjectSelect = document.getElementById('uploadSubjectSelect');
-        if (catSelect) cat = catSelect.value;
         if (subjectSelect) subject = subjectSelect.value;
     } else {
         const subjectSelect = document.getElementById('uploadSMSubjectSelect');
         if (subjectSelect) subject = subjectSelect.value;
     }
-    if (!subject) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Select a subject.</div>`; if(progressDiv) progressDiv.style.display = 'none'; item.status = 'pending'; currentUpload = null; isUploading = false; processNextInQueue(); return; }
-    if(progressDiv) progressDiv.style.display = 'block';
-    if(progressBar) progressBar.style.width = '0%';
-    if(progressText) progressText.textContent = '0%';
-    if(fileNameDisplay) fileNameDisplay.textContent = `Uploading: ${file.name}`;
-    const reader = new FileReader();
-    let loaded = 0, total = file.size;
-    item.reader = reader;
-    uploadAbortController = new AbortController();
-    reader.onprogress = function(e) {
-        if (e.lengthComputable && !uploadPaused && !uploadCancelled) {
-            loaded = e.loaded;
-            const percent = Math.round((loaded / total) * 100);
-            item.progress = percent;
-            if(progressBar) progressBar.style.width = percent + '%';
-            if(progressText) progressText.textContent = percent + '%';
-            if(fileNameDisplay) fileNameDisplay.textContent = `Uploading: ${file.name} (${percent}%)`;
-            updateQueueUI();
-        }
-    };
-    reader.onload = function(e) {
-        if (uploadCancelled) { 
-            item.status = 'cancelled'; 
-            currentUpload = null; 
-            isUploading = false; 
-            updateQueueUI(); 
-            if(progressDiv) progressDiv.style.display = 'none'; 
-            if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> Cancelled ${file.name}</div>`; 
-            processNextInQueue(); 
-            return; 
-        }
-        if (uploadPaused) { 
-            item.status = 'paused'; 
-            currentUpload = null; 
-            isUploading = false; 
-            updateQueueUI(); 
-            if(progressDiv) progressDiv.style.display = 'none'; 
-            if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-pause"></i> Paused ${file.name}</div>`; 
-            return; 
-        }
-        const fileData = e.target.result;
-        if (isAdmin()) {
-            const fileObj = { id: generateId(), name: file.name, size: file.size, type: file.type, data: fileData, uploadedAt: Date.now(), uploadedBy: currentUsername || 'anonymous' };
-            if (uploadCategory === 'questionPapers') { if(!appData.questionPapers[cat].files[subject]) appData.questionPapers[cat].files[subject] = []; appData.questionPapers[cat].files[subject].push(fileObj); }
-            else { if(!appData.subjectMaterials.files[subject]) appData.subjectMaterials.files[subject] = []; appData.subjectMaterials.files[subject].push(fileObj); }
-            appData.uploadHistory.push({ fileName: file.name, category: uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials', subject, uploadedAt: Date.now(), uploadedBy: currentUsername || 'anonymous' });
-            saveData(appData);
-            logUserActivity(currentUsername,currentRole,'Upload File',`Uploaded ${file.name} to ${subject}`);
-            item.status = 'completed'; item.progress = 100; if(progressBar) progressBar.style.width = '100%'; if(progressText) progressText.textContent = '100%'; if(fileNameDisplay) fileNameDisplay.textContent = `✅ ${file.name}`;
-            if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> ${file.name} uploaded successfully!</div>`;
-            currentUpload = null; isUploading = false; updateQueueUI();
-            setTimeout(() => { if(progressDiv) progressDiv.style.display = 'none'; processNextInQueue(); }, 800);
-        } else {
-            if (!window._approvalFiles) window._approvalFiles = [];
-            window._approvalFiles.push({ name: file.name, size: file.size, type: file.type, data: fileData });
-            item.status = 'completed'; 
-            item.progress = 100; 
-            if(progressBar) progressBar.style.width = '100%'; 
-            if(progressText) progressText.textContent = '100%'; 
-            if(fileNameDisplay) fileNameDisplay.textContent = `📤 Prepared: ${file.name}`;
-            const remaining = uploadQueue.filter(q => q.status === 'pending' || q.status === 'uploading');
-            if (remaining.length === 0) {
-                const categoryName = uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials';
-                const catValue = uploadCategory === 'questionPapers' ? cat : null;
-                submitApprovalRequest(categoryName, catValue, subject, null, window._approvalFiles);
-                window._approvalFiles = [];
-                if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-clock"></i> Files sent for approval.</div>`;
-            } else {
-                if(statusDiv) statusDiv.innerHTML = `<div style="color:#17a2b8; padding:12px; background:rgba(23,162,184,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> ${file.name} prepared (${remaining.length} remaining)</div>`;
-            }
-            currentUpload = null; 
-            isUploading = false; 
-            updateQueueUI();
-            setTimeout(() => { 
-                if(progressDiv) progressDiv.style.display = 'none'; 
-                processNextInQueue(); 
-            }, 800);
-        }
-    };
-    reader.onerror = function() { 
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error reading ${file.name}</div>`; 
-        item.status = 'pending'; 
-        currentUpload = null; 
-        isUploading = false; 
-        if(progressDiv) progressDiv.style.display = 'none'; 
-        updateQueueUI(); 
-        processNextInQueue(); 
-    };
-    uploadPaused = false; 
-    uploadCancelled = false;
-    reader.readAsDataURL(file);
+    
+    if (!subject) {
+        const statusDiv = document.getElementById('uploadStatus');
+        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please select a subject first.</div>`;
+        return;
+    }
+    
+    handleSupabaseUpload(files, subject);
+    event.target.value = '';
+}
+window.handleFileUpload = handleFileUpload;
+
+function updateQueueUI() {
+    // Queue UI for Supabase uploads
+    const info = document.getElementById('uploadQueueInfo');
+    if (info) info.style.display = 'none';
+}
+window.updateQueueUI = updateQueueUI;
+
+function processNextInQueue() {
+    // Not used with Supabase upload
+}
+window.processNextInQueue = processNextInQueue;
+
+function startUpload(item) {
+    // Not used with Supabase upload
 }
 window.startUpload = startUpload;
 
 function pauseUpload(itemId) {
-    const item = uploadQueue.find(q => q.id === itemId);
-    if (item && item.status === 'uploading') {
-        uploadPaused = true;
-        if (item.reader) item.reader.abort();
-        if (uploadAbortController) try { uploadAbortController.abort(); } catch(e) {}
-        item.status = 'paused';
-        currentUpload = null; 
-        isUploading = false;
-        updateQueueUI();
-        document.getElementById('uploadProgress').style.display = 'none';
-        const statusDiv = document.getElementById('uploadStatus');
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-pause"></i> Paused ${item.file.name}</div>`;
-    }
+    // Not used with Supabase upload
 }
 window.pauseUpload = pauseUpload;
 
 function resumeUpload(itemId) {
-    const item = uploadQueue.find(q => q.id === itemId);
-    if (item && item.status === 'paused') {
-        item.status = 'pending';
-        uploadPaused = false; 
-        uploadCancelled = false;
-        currentUpload = null;
-        updateQueueUI();
-        const statusDiv = document.getElementById('uploadStatus');
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#17a2b8; padding:12px; background:rgba(23,162,184,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> Resuming ${item.file.name}...</div>`;
-        if (!isUploading) processNextInQueue();
-    }
+    // Not used with Supabase upload
 }
 window.resumeUpload = resumeUpload;
 
 function cancelUpload(itemId) {
-    const item = uploadQueue.find(q => q.id === itemId);
-    if (item && (item.status === 'pending' || item.status === 'uploading' || item.status === 'paused')) {
-        if (item.status === 'uploading') { 
-            uploadCancelled = true; 
-            if (item.reader) item.reader.abort(); 
-            if (uploadAbortController) try { uploadAbortController.abort(); } catch(e) {} 
-        }
-        item.status = 'cancelled';
-        currentUpload = null; 
-        isUploading = false;
-        updateQueueUI();
-        document.getElementById('uploadProgress').style.display = 'none';
-        const statusDiv = document.getElementById('uploadStatus');
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> Cancelled ${item.file.name}</div>`;
-        processNextInQueue();
-    }
+    // Not used with Supabase upload
 }
 window.cancelUpload = cancelUpload;
 
@@ -1908,10 +2062,20 @@ if (approvalsCard) approvalsCard.style.display = 'none';
 if (monitoringCard) monitoringCard.style.display = 'none';
 updateCounts(); updatePendingBadge();
 
-console.log('✅ Medi Electro Vault - Fully Functional with Firebase!');
-console.log('📊 All data (users, uploads, approvals, logs) saved in localStorage + Firebase sync');
+console.log('✅ Medi Electro Vault - Fully Functional with Supabase!');
+console.log('📊 Data saved in localStorage + Supabase Database');
+console.log('📁 Files uploaded to Supabase Storage');
 console.log('🔔 Notifications working - Admin can see pending requests');
-console.log('📁 Uploads work for all roles with proper approval flow');
+
+// Check Supabase connection on load
+setTimeout(async () => {
+    const connected = await testSupabaseConnection();
+    if (connected) {
+        console.log('🚀 Supabase is ready!');
+    } else {
+        console.warn('⚠️ Supabase connection failed. Check your configuration.');
+    }
+}, 2000);
 
 </script>
 </body>
