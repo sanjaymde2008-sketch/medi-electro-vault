@@ -20,20 +20,12 @@
     }
     </script>
 
-    <!-- Supabase SDK -->
+    <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    
     <style>
+        /* ===== RESET & BASE ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root {
-            --primary: #0a4b78;
-            --primary-light: #1f7ea3;
-            --success: #28a745;
-            --danger: #dc3545;
-            --warning: #ffc107;
-            --glass-bg: rgba(255, 255, 255, 0.45);
-            --glass-border: rgba(255, 255, 255, 0.5);
-        }
         body {
             font-family: 'Inter', sans-serif;
             background: #f0f7fe;
@@ -46,13 +38,13 @@
         .portal {
             max-width: 1400px;
             width: 100%;
-            background: var(--glass-bg);
+            background: rgba(255, 255, 255, 0.45);
             backdrop-filter: blur(14px) saturate(180%);
             -webkit-backdrop-filter: blur(14px) saturate(180%);
             border-radius: 56px;
             box-shadow: 0 30px 60px -20px rgba(2, 30, 60, 0.4);
             padding: 28px 32px 32px;
-            border: 1px solid var(--glass-border);
+            border: 1px solid rgba(255, 255, 255, 0.5);
             transition: all 0.25s ease;
             margin: 0 auto;
             animation: portalEntry 0.8s ease-out;
@@ -61,7 +53,7 @@
             0% { opacity: 0; transform: scale(0.95) translateY(30px); }
             100% { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .flex-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+        .flex-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
         .vcet-brand {
             display: flex;
             align-items: center;
@@ -69,13 +61,13 @@
             background: rgba(255,255,255,0.3);
             padding: 6px 18px 6px 12px;
             border-radius: 40px;
-            border: 1px solid var(--glass-border);
+            border: 1px solid rgba(255,255,255,0.5);
             backdrop-filter: blur(4px);
         }
         .vcet-logo {
             width: 48px;
             height: 48px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            background: linear-gradient(135deg, #0a4b78, #1f7ea3);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -86,57 +78,88 @@
             box-shadow: 0 4px 12px rgba(10, 75, 120, 0.3);
             animation: logoPulse 3s ease-in-out infinite;
         }
-        @keyframes logoPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
+        @keyframes logoPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
         .vcet-text { font-weight: 600; font-size: 0.9rem; color: #0a2b48; line-height: 1.2; }
         .vcet-text small { display: block; font-weight: 400; font-size: 0.7rem; color: #1f5175; }
         .dept-brand { display: flex; align-items: center; gap: 12px; }
-        .dept-brand i { font-size: 2rem; color: var(--primary); background: rgba(10, 75, 120, 0.08); padding: 10px; border-radius: 20px; animation: iconFloat 4s ease-in-out infinite; }
+        .dept-brand i { font-size: 2rem; color: #0a4b78; background: rgba(10, 75, 120, 0.08); padding: 10px; border-radius: 20px; animation: iconFloat 4s ease-in-out infinite; }
         @keyframes iconFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
         .dept-brand h1 { font-weight: 700; font-size: 1.8rem; letter-spacing: -0.02em; background: linear-gradient(145deg, #0b2b4a, #1a5f8a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .dept-brand small { font-weight: 400; font-size: 0.85rem; color: #1b4b6e; background: rgba(0,70,120,0.06); padding: 2px 14px; border-radius: 30px; border: 1px solid rgba(0,70,120,0.08); }
         .heartbeat { display: inline-block; animation: pulse 1.4s ease-in-out infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 14% { transform: scale(1.18); } 28% { transform: scale(1); } 42% { transform: scale(1.12); } 56% { transform: scale(1); } }
-        .scope-line { height: 3px; width: 100%; background: linear-gradient(90deg, var(--primary), #3fa3d0, var(--primary)); margin: 12px 0 4px; border-radius: 10px; opacity: 0.3; animation: scopePulse 3s ease-in-out infinite; }
+        .scope-line { height: 3px; width: 100%; background: linear-gradient(90deg, #0a4b78, #3fa3d0, #0a4b78); margin: 12px 0 4px; border-radius: 10px; opacity: 0.3; animation: scopePulse 3s ease-in-out infinite; }
         @keyframes scopePulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; } }
         .hidden { display: none !important; }
-        .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 40px; font-weight: 600; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; position: relative; overflow: hidden; }
+        
+        /* ===== BUTTONS ===== */
+        .btn-primary { background: #0a4b78; color: white; border: none; padding: 12px 24px; border-radius: 40px; font-weight: 600; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; position: relative; overflow: hidden; }
         .btn-primary::after { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent); transform: rotate(45deg) translateX(-100%); transition: 0.6s; }
         .btn-primary:hover::after { transform: rotate(45deg) translateX(100%); }
         .btn-primary:hover { background: #0f5f92; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(10, 75, 120, 0.3); }
-        .btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); padding: 8px 20px; border-radius: 40px; font-weight: 500; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; }
-        .btn-outline:hover { background: var(--primary); color: white; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(10, 75, 120, 0.2); }
-        .btn-danger { background: var(--danger); color: white; border: none; padding: 8px 16px; border-radius: 40px; font-weight: 500; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-outline { background: transparent; border: 1.5px solid #0a4b78; color: #0a4b78; padding: 8px 20px; border-radius: 40px; font-weight: 500; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; }
+        .btn-outline:hover { background: #0a4b78; color: white; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(10, 75, 120, 0.2); }
+        .btn-danger { background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 40px; font-weight: 500; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; }
         .btn-danger:hover { background: #c82333; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3); }
-        .btn-success { background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 40px; font-weight: 500; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; }
+        .btn-success { background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 40px; font-weight: 500; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; }
         .btn-success:hover { background: #218838; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3); }
-        .btn-warning { background: var(--warning); color: #212529; border: none; padding: 8px 16px; border-radius: 40px; font-weight: 500; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; }
-        .btn-warning:hover { background: #e0a800; transform: translateY(-2px); }
-        .login-card { background: rgba(255,255,255,0.5); backdrop-filter: blur(8px); border-radius: 48px; padding: 40px 44px; max-width: 520px; margin: 0 auto; box-shadow: 0 20px 40px -12px rgba(0,40,70,0.2); border: 1px solid var(--glass-border); animation: slideUp 0.6s ease-out; }
+        .btn-info { background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 40px; font-weight: 500; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; }
+        .btn-info:hover { background: #138496; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(23, 162, 184, 0.3); }
+        .btn-preview { background: #17a2b8; color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.8rem; transition: all 0.3s; }
+        .btn-preview:hover { background: #138496; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3); }
+        .btn-download { background: #0a4b78; color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.8rem; transition: all 0.3s; }
+        .btn-download:hover { background: #0f5f92; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(10, 75, 120, 0.3); }
+        .btn-delete { background: #dc3545; color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.8rem; transition: all 0.3s; }
+        .btn-delete:hover { background: #c82333; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3); }
+        .close-btn { background: rgba(220, 53, 69, 0.1); border: 1px solid rgba(220, 53, 69, 0.2); color: #dc3545; padding: 8px 20px; border-radius: 40px; cursor: pointer; font-weight: 500; transition: all 0.3s; font-family: 'Inter', sans-serif; }
+        .close-btn:hover { background: #dc3545; color: white; transform: scale(1.05); }
+        
+        /* ===== LOGIN ===== */
+        .login-card {
+            background: rgba(255,255,255,0.5);
+            backdrop-filter: blur(8px);
+            border-radius: 48px;
+            padding: 40px 44px;
+            max-width: 520px;
+            margin: 0 auto;
+            box-shadow: 0 20px 40px -12px rgba(0,40,70,0.2);
+            border: 1px solid rgba(255,255,255,0.6);
+            animation: slideUp 0.6s ease-out;
+        }
         @keyframes slideUp { 0% { opacity: 0; transform: translateY(40px); } 100% { opacity: 1; transform: translateY(0); } }
         .login-card h2 { font-weight: 700; font-size: 1.8rem; color: #0a2b48; text-align: center; }
         .tab-container { display: flex; gap: 8px; margin: 20px 0 24px; background: rgba(10, 75, 120, 0.06); border-radius: 40px; padding: 6px; }
         .tab-btn { flex: 1; padding: 12px 16px; border: none; background: transparent; border-radius: 30px; font-weight: 600; font-size: 0.9rem; color: #1f5175; cursor: pointer; transition: all 0.3s; font-family: 'Inter', sans-serif; }
-        .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(10, 75, 120, 0.25); transform: scale(1.02); }
+        .tab-btn.active { background: #0a4b78; color: white; box-shadow: 0 4px 12px rgba(10, 75, 120, 0.25); transform: scale(1.02); }
         .tab-btn:hover:not(.active) { background: rgba(10, 75, 120, 0.08); transform: translateY(-2px); }
         .login-form { display: none; animation: fadeSlide 0.4s ease-out; }
         .login-form.active { display: block; }
         @keyframes fadeSlide { 0% { opacity: 0; transform: translateX(20px); } 100% { opacity: 1; transform: translateX(0); } }
         .password-wrapper { position: relative; width: 100%; }
-        .login-input { width: 100%; padding: 16px 50px 16px 20px; border-radius: 40px; border: 1px solid rgba(0,50,90,0.15); background: rgba(255,255,255,0.6); font-size: 1rem; transition: all 0.3s; margin-top: 8px; }
-        .login-input:focus { outline: 2px solid var(--primary-light); background: white; box-shadow: 0 0 20px rgba(31, 126, 163, 0.15); transform: translateY(-2px); }
+        .login-input {
+            width: 100%;
+            padding: 16px 50px 16px 20px;
+            border-radius: 40px;
+            border: 1px solid rgba(0,50,90,0.15);
+            background: rgba(255,255,255,0.6);
+            font-size: 1rem;
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+        .login-input:focus { outline: 2px solid #1f7ea3; background: white; box-shadow: 0 0 20px rgba(31, 126, 163, 0.15); transform: translateY(-2px); }
         .eye-btn { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #1f5175; font-size: 1.1rem; padding: 4px; transition: 0.3s; }
-        .eye-btn:hover { color: var(--primary); transform: translateY(-50%) scale(1.1); }
+        .eye-btn:hover { color: #0a4b78; transform: translateY(-50%) scale(1.1); }
         .login-hint { text-align: center; margin-top: 16px; font-size: 0.75rem; color: #1f5175; opacity: 0.7; }
+        
+        /* ===== DASHBOARD ===== */
         .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 20px; margin-top: 28px; position: relative; }
         .glass-card {
             background: rgba(255,255,255,0.5);
             backdrop-filter: blur(6px);
             border-radius: 32px;
             padding: 24px 18px;
-            border: 1px solid var(--glass-border);
+            border: 1px solid rgba(255,255,255,0.7);
             box-shadow: 0 8px 18px -6px rgba(0,40,70,0.08);
             transition: all 0.3s ease;
             text-align: center;
@@ -155,14 +178,14 @@
         .glass-card:nth-child(8) { animation-delay: 0.8s; }
         @keyframes cardFadeIn { 0% { opacity: 0; transform: translateY(30px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
         .glass-card:hover { transform: translateY(-6px); background: rgba(255,255,255,0.7); box-shadow: 0 20px 40px -12px rgba(0,40,80,0.2); border-color: rgba(0,120,200,0.3); }
-        .glass-card i { font-size: 2.2rem; color: var(--primary); background: rgba(10,75,120,0.04); padding: 14px; border-radius: 30px; transition: 0.3s; }
+        .glass-card i { font-size: 2.2rem; color: #0a4b78; background: rgba(10,75,120,0.04); padding: 14px; border-radius: 30px; transition: 0.3s; }
         .glass-card:hover i { transform: scale(1.05); }
         .glass-card h4 { font-weight: 600; margin-top: 12px; color: #0b2a44; }
         .glass-card .notification-badge {
             position: absolute;
             top: -12px;
             right: -12px;
-            background: var(--danger);
+            background: #dc3545;
             color: white;
             border-radius: 50%;
             padding: 4px 8px;
@@ -179,139 +202,34 @@
             z-index: 10;
         }
         @keyframes badgePop { 0% { transform: scale(0); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
-        .badge { background: var(--primary); color: white; padding: 2px 14px; border-radius: 30px; font-size: 0.7rem; font-weight: 600; }
-        .admin-badge { background: var(--danger); color: white; padding: 2px 14px; border-radius: 30px; font-size: 0.7rem; font-weight: 600; margin-left: 8px; animation: glowPulse 2s ease-in-out infinite; }
+        .badge { background: #0a4b78; color: white; padding: 2px 14px; border-radius: 30px; font-size: 0.7rem; font-weight: 600; }
+        .admin-badge { background: #dc3545; color: white; padding: 2px 14px; border-radius: 30px; font-size: 0.7rem; font-weight: 600; margin-left: 8px; animation: glowPulse 2s ease-in-out infinite; }
         @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 5px rgba(220, 53, 69, 0.3); } 50% { box-shadow: 0 0 20px rgba(220, 53, 69, 0.6); } }
-        .user-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem; cursor: pointer; transition: all 0.3s; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0a4b78, #1f7ea3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid rgba(255,255,255,0.5);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
         .user-avatar:hover { transform: scale(1.05); box-shadow: 0 8px 25px rgba(10, 75, 120, 0.3); }
         .user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         .user-avatar .avatar-initials { font-size: 1.2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .dept-icon-btn { display: inline-flex; align-items: center; gap: 8px; background: rgba(10, 75, 120, 0.08); padding: 6px 16px 6px 12px; border-radius: 40px; cursor: pointer; transition: all 0.3s; border: 1px solid rgba(10, 75, 120, 0.15); font-family: 'Inter', sans-serif; font-size: 0.85rem; color: #0a2b48; font-weight: 500; }
         .dept-icon-btn:hover { background: rgba(10, 75, 120, 0.15); transform: translateY(-2px); box-shadow: 0 4px 15px rgba(10, 75, 120, 0.15); }
-        .dept-icon-btn i { font-size: 1.1rem; color: var(--primary); }
-        .page-container { background: rgba(255,255,255,0.3); backdrop-filter: blur(8px); border-radius: 40px; padding: 30px; margin-top: 20px; border: 1px solid var(--glass-border); animation: pageSlide 0.5s ease-out; }
-        @keyframes pageSlide { 0% { opacity: 0; transform: translateY(30px) scale(0.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-        .page-header h2 { color: #0a2b48; font-weight: 700; }
-        .close-btn { background: rgba(220, 53, 69, 0.1); border: 1px solid rgba(220, 53, 69, 0.2); color: var(--danger); padding: 8px 20px; border-radius: 40px; cursor: pointer; font-weight: 500; transition: all 0.3s; font-family: 'Inter', sans-serif; }
-        .close-btn:hover { background: var(--danger); color: white; transform: scale(1.05); }
-        .category-card { background: rgba(255,255,255,0.4); border-radius: 24px; padding: 16px; border: 1px solid var(--glass-border); cursor: pointer; transition: all 0.3s ease; text-align: center; position: relative; animation: cardFadeIn 0.5s ease-out both; }
-        .category-card:hover { background: rgba(255,255,255,0.7); transform: translateY(-4px); box-shadow: 0 12px 30px -8px rgba(0,40,80,0.15); }
-        .category-card h4 { color: #0a2b48; margin: 8px 0; }
-        .category-card .file-count { font-size: 0.8rem; color: #1f5175; }
-        .file-list { background: rgba(255,255,255,0.2); border-radius: 24px; padding: 16px; margin-top: 16px; }
-        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid rgba(0,40,70,0.06); transition: all 0.3s; border-radius: 12px; animation: fadeInItem 0.4s ease-out both; }
-        .file-item:hover { background: rgba(255,255,255,0.3); transform: translateX(4px); }
-        .file-item:last-child { border-bottom: none; }
-        .file-item .file-info { display: flex; align-items: center; gap: 12px; flex: 1; }
-        .file-item .file-info i { font-size: 1.5rem; transition: 0.3s; }
-        .file-item:hover .file-info i { transform: scale(1.05); }
-        .file-item .file-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .file-item .file-actions button { padding: 4px 12px; border-radius: 20px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.8rem; transition: all 0.3s; }
-        .file-item .file-actions button:hover { transform: translateY(-2px); }
-        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; animation: modalFade 0.4s ease-out; }
-        @keyframes modalFade { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
-        .modal-content { background: white; border-radius: 32px; padding: 32px; max-width: 700px; width: 95%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; animation: modalSlide 0.4s ease-out; }
-        @keyframes modalSlide { 0% { opacity: 0; transform: translateY(30px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-        .modal-content h3 { color: #0a2b48; margin-bottom: 16px; }
-        .modal-content .modal-actions { display: flex; gap: 12px; margin-top: 20px; justify-content: flex-end; flex-wrap: wrap; }
-        .modal-content .file-preview { max-width: 100%; max-height: 500px; border-radius: 12px; border: 1px solid #ddd; margin: 8px 0; }
-        .modal-content .file-preview img { max-width: 100%; max-height: 500px; border-radius: 12px; display: block; margin: 0 auto; }
-        .modal-content .file-preview iframe { width: 100%; height: 500px; border: none; border-radius: 12px; }
-        .approval-request { background: rgba(255,255,255,0.5); border-radius: 20px; padding: 20px 24px; margin: 12px 0; border-left: 6px solid var(--warning); transition: all 0.3s; animation: fadeInItem 0.4s ease-out both; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .approval-request:hover { background: rgba(255,255,255,0.8); transform: translateX(6px); box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
-        .approval-request.approved { border-left-color: var(--success); opacity: 0.7; background: rgba(40,167,69,0.1); }
-        .approval-request.rejected { border-left-color: var(--danger); opacity: 0.5; background: rgba(220,53,69,0.1); }
-        .approval-request .request-info { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-size: 1.05rem; }
-        .approval-request .request-info .request-title { font-weight: 700; color: #0a2b48; font-size: 1.1rem; }
-        .approval-request .request-info .request-meta { color: #1f5175; font-size: 0.9rem; }
-        .approval-request .request-details { background: rgba(255,255,255,0.3); border-radius: 12px; padding: 12px 16px; margin: 8px 0; font-size: 0.95rem; }
-        .approval-request .request-details i { color: var(--primary); width: 20px; }
-        .approval-request .request-actions { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-        .approval-request .request-actions button { padding: 8px 20px; border-radius: 30px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 600; transition: all 0.3s; }
-        .approval-request .request-actions button:hover { transform: translateY(-3px); }
-        .approval-request .request-actions .btn-preview-request { background: #17a2b8; color: white; }
-        .approval-request .request-actions .btn-preview-request:hover { background: #138496; box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4); }
-        .approval-request .pending-badge { animation: pulseGlow 2s infinite; background: var(--warning); color: #212529; padding: 4px 16px; border-radius: 30px; font-size: 0.8rem; font-weight: 700; display: inline-block; }
-        .approval-request .status-badge { padding: 4px 16px; border-radius: 30px; font-size: 0.8rem; font-weight: 700; display: inline-block; }
-        .approval-request .status-badge.approved-badge { background: var(--success); color: white; }
-        .approval-request .status-badge.rejected-badge { background: var(--danger); color: white; }
-        .monitoring-item { background: rgba(255,255,255,0.3); border-radius: 12px; padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--primary); transition: all 0.3s; animation: fadeInItem 0.3s ease-out both; }
-        .monitoring-item:hover { background: rgba(255,255,255,0.5); transform: translateX(4px); }
-        .slogan-container { overflow: hidden; background: linear-gradient(90deg, var(--primary), var(--primary-light), var(--primary)); padding: 10px 0; border-radius: 40px; margin: 8px 0 4px 0; position: relative; box-shadow: 0 4px 15px rgba(10, 75, 120, 0.2); animation: sloganGlow 4s ease-in-out infinite; }
-        @keyframes sloganGlow { 0%, 100% { box-shadow: 0 4px 15px rgba(10, 75, 120, 0.2); } 50% { box-shadow: 0 4px 30px rgba(10, 75, 120, 0.4); } }
-        .slogan-text { display: inline-block; white-space: nowrap; animation: scrollSlogan 35s linear infinite; color: white; font-weight: 600; font-size: 1rem; letter-spacing: 1px; padding: 0 20px; }
-        .slogan-text i { margin: 0 15px; color: #ffd700; }
-        .slogan-text .heart-icon { color: #ff4757; animation: heartbeat 1s infinite; }
-        @keyframes scrollSlogan { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+        .dept-icon-btn i { font-size: 1.1rem; color: #0a4b78; }
         .name-display { background: rgba(37, 211, 102, 0.15); padding: 2px 12px; border-radius: 20px; border: 1px solid rgba(37, 211, 102, 0.3); font-size: 0.8rem; color: #075e54; }
-        .dept-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
-        .feature-card { background: rgba(255,255,255,0.4); border-radius: 24px; padding: 24px; border: 1px solid var(--glass-border); transition: all 0.3s ease; text-align: center; position: relative; overflow: hidden; animation: cardFadeIn 0.6s ease-out both; }
-        .feature-card:hover { transform: translateY(-6px); background: rgba(255,255,255,0.7); box-shadow: 0 20px 40px -12px rgba(0,40,80,0.2); }
-        .feature-card i { font-size: 2.5rem; color: var(--primary); background: rgba(10,75,120,0.08); padding: 16px; border-radius: 50%; margin-bottom: 12px; display: inline-block; transition: 0.3s; }
-        .feature-card:hover i { transform: scale(1.05); }
-        .feature-card h4 { color: #0a2b48; margin-bottom: 8px; }
-        .feature-card p { color: #1f5175; font-size: 0.9rem; line-height: 1.5; }
-        .dept-image-placeholder { background: linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius: 24px; padding: 40px; text-align: center; color: white; margin: 20px 0; position: relative; overflow: hidden; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: cardFadeIn 0.8s ease-out; }
-        .dept-image-placeholder::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: rotateBg 20s linear infinite; }
-        @keyframes rotateBg { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .dept-image-placeholder h3 { font-size: 2rem; font-weight: 700; position: relative; z-index: 1; }
-        .dept-image-placeholder p { font-size: 1.1rem; opacity: 0.9; position: relative; z-index: 1; margin-top: 8px; }
-        .dept-image-placeholder .dept-icons { position: relative; z-index: 1; font-size: 3rem; margin-bottom: 12px; }
-        .dept-image-placeholder .dept-icons i { margin: 0 12px; animation: iconFloat 4s ease-in-out infinite; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 16px 0; }
-        .stats-card { background: rgba(255,255,255,0.4); border-radius: 20px; padding: 20px; text-align: center; transition: all 0.3s; animation: cardFadeIn 0.6s ease-out both; }
-        .stats-card:hover { transform: translateY(-4px); background: rgba(255,255,255,0.6); box-shadow: 0 12px 30px -8px rgba(0,40,80,0.15); }
-        .stats-card .stat-number { font-size: 2rem; font-weight: 700; color: var(--primary); }
-        .stats-card .stat-label { font-size: 0.85rem; color: #1f5175; margin-top: 4px; }
-        .upload-progress { background: #e9ecef; border-radius: 10px; height: 8px; margin: 10px 0; overflow: hidden; }
-        .upload-progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), #3fa3d0); transition: width 0.3s; border-radius: 10px; }
-        .upload-queue-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.3); border-radius: 12px; margin: 4px 0; font-size: 0.85rem; }
-        .upload-queue-item .queue-status { display: flex; gap: 8px; align-items: center; }
-        .upload-queue-item .queue-actions { display: flex; gap: 6px; }
-        .upload-queue-item .queue-actions button { padding: 2px 10px; border-radius: 20px; border: none; font-size: 0.7rem; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; }
-        .upload-queue-item .queue-actions button:hover { transform: scale(1.05); }
-        .upload-queue-item .queue-actions .pause-btn { background: var(--warning); color: #212529; }
-        .upload-queue-item .queue-actions .resume-btn { background: var(--success); color: white; }
-        .upload-queue-item .queue-actions .cancel-btn { background: var(--danger); color: white; }
-        .footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid rgba(0,50,90,0.08); display: flex; justify-content: space-between; flex-wrap: wrap; color: #1f5175; font-size: 0.85rem; }
-        .footer .vcet-footer { display: flex; align-items: center; gap: 12px; }
-        .footer .vcet-footer .vcet-logo-small { width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.7rem; }
-        .dashboard-fade-in { animation: dashboardFade 0.8s ease-out; }
-        @keyframes dashboardFade { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
-        .profile-section { background: rgba(255,255,255,0.3); border-radius: 24px; padding: 20px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.4); }
-        .profile-section .profile-field { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(0,40,70,0.05); }
-        .profile-section .profile-field:last-child { border-bottom: none; }
-        .profile-section .profile-label { font-weight: 600; color: #0a2b48; }
-        .profile-section .profile-value { color: #1f5175; }
-        .password-field { position: relative; }
-        .password-field .eye-btn-small { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #1f5175; padding: 4px; }
-        .password-field .eye-btn-small:hover { color: var(--primary); }
-        .connection-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
-        .connection-status.online { background: rgba(40, 167, 69, 0.15); color: var(--success); border: 1px solid rgba(40, 167, 69, 0.3); }
-        .connection-status.offline { background: rgba(220, 53, 69, 0.15); color: var(--danger); border: 1px solid rgba(220, 53, 69, 0.3); }
-        .connection-status .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-        .connection-status.online .dot { background: var(--success); animation: pulseDot 2s infinite; }
-        .connection-status.offline .dot { background: var(--danger); }
-        @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .avatar-upload-modal { text-align: center; padding: 20px; }
-        .avatar-upload-modal .avatar-preview { width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 16px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white; font-weight: 700; border: 3px solid var(--primary); overflow: hidden; }
-        .avatar-upload-modal .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
-        .avatar-upload-modal input[type="file"] { display: none; }
-        .file-upload-area { border: 3px dashed rgba(10,75,120,0.3); border-radius: 24px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(255,255,255,0.2); margin: 12px 0; }
-        .file-upload-area:hover, .file-upload-area.dragover { border-color: var(--primary); background: rgba(255,255,255,0.3); transform: scale(1.01); }
-        .btn-preview { background: #17a2b8; color: white; }
-        .btn-preview:hover { background: #138496; box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3); }
-        .btn-download { background: var(--primary); color: white; }
-        .btn-download:hover { background: #0f5f92; box-shadow: 0 4px 15px rgba(10, 75, 120, 0.3); }
-        .btn-delete { background: var(--danger); color: white; }
-        .btn-delete:hover { background: #c82333; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3); }
-        .admin-actions { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
-        .admin-actions button { padding: 2px 10px; border-radius: 20px; border: none; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; }
-        .admin-actions button:hover { transform: scale(1.05); }
-        .subject-select { width: 100%; padding: 12px 20px; border-radius: 40px; border: 1px solid rgba(0,50,90,0.15); background: rgba(255,255,255,0.6); font-size: 1rem; transition: all 0.3s; margin-top: 4px; }
-        .subject-select:focus { outline: 2px solid var(--primary-light); background: white; box-shadow: 0 0 20px rgba(31, 126, 163, 0.15); }
         .status-badge {
             padding: 4px 14px;
             border-radius: 20px;
@@ -322,21 +240,183 @@
             align-items: center;
             gap: 6px;
         }
-        .status-badge.connected {
-            background: rgba(40, 167, 69, 0.15);
-            color: var(--success);
-            border: 1px solid rgba(40, 167, 69, 0.3);
+        .status-badge.connected { background: rgba(40,167,69,0.15); color: #28a745; border: 1px solid rgba(40,167,69,0.3); }
+        .status-badge.disconnected { background: rgba(220,53,69,0.15); color: #dc3545; border: 1px solid rgba(220,53,69,0.3); }
+        .status-badge.testing { background: rgba(255,193,7,0.15); color: #856404; border: 1px solid rgba(255,193,7,0.3); }
+        .connection-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+        .connection-status.online { background: rgba(40,167,69,0.15); color: #28a745; border: 1px solid rgba(40,167,69,0.3); }
+        .connection-status .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; background: #28a745; animation: pulseDot 2s infinite; }
+        @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
+        /* ===== PAGES ===== */
+        .page-container { background: rgba(255,255,255,0.3); backdrop-filter: blur(8px); border-radius: 40px; padding: 30px; margin-top: 20px; border: 1px solid rgba(255,255,255,0.5); animation: pageSlide 0.5s ease-out; }
+        @keyframes pageSlide { 0% { opacity: 0; transform: translateY(30px) scale(0.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        .page-header h2 { color: #0a2b48; font-weight: 700; }
+        
+        /* ===== CATEGORY CARDS ===== */
+        .category-card {
+            background: rgba(255,255,255,0.4);
+            border-radius: 24px;
+            padding: 16px;
+            border: 1px solid rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+            animation: cardFadeIn 0.5s ease-out both;
         }
-        .status-badge.disconnected {
-            background: rgba(220, 53, 69, 0.15);
-            color: var(--danger);
-            border: 1px solid rgba(220, 53, 69, 0.3);
+        .category-card:hover { background: rgba(255,255,255,0.7); transform: translateY(-4px); box-shadow: 0 12px 30px -8px rgba(0,40,80,0.15); }
+        .category-card h4 { color: #0a2b48; margin: 8px 0; }
+        .category-card .file-count { font-size: 0.8rem; color: #1f5175; }
+        
+        /* ===== FILE LIST ===== */
+        .file-list { background: rgba(255,255,255,0.2); border-radius: 24px; padding: 16px; margin-top: 16px; }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid rgba(0,40,70,0.06);
+            transition: all 0.3s;
+            border-radius: 12px;
+            animation: fadeInItem 0.4s ease-out both;
         }
-        .status-badge.testing {
-            background: rgba(255, 193, 7, 0.15);
-            color: #856404;
-            border: 1px solid rgba(255, 193, 7, 0.3);
+        .file-item:hover { background: rgba(255,255,255,0.3); transform: translateX(4px); }
+        .file-item:last-child { border-bottom: none; }
+        .file-item .file-info { display: flex; align-items: center; gap: 12px; flex: 1; }
+        .file-item .file-info i { font-size: 1.5rem; transition: 0.3s; }
+        .file-item:hover .file-info i { transform: scale(1.05); }
+        .file-item .file-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        
+        /* ===== MODAL ===== */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: modalFade 0.4s ease-out;
         }
+        @keyframes modalFade { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+        .modal-content {
+            background: white;
+            border-radius: 32px;
+            padding: 32px;
+            max-width: 700px;
+            width: 95%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlide 0.4s ease-out;
+        }
+        @keyframes modalSlide { 0% { opacity: 0; transform: translateY(30px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        .modal-content h3 { color: #0a2b48; margin-bottom: 16px; }
+        .modal-content .modal-actions { display: flex; gap: 12px; margin-top: 20px; justify-content: flex-end; flex-wrap: wrap; }
+        .modal-content .file-preview { max-width: 100%; max-height: 500px; border-radius: 12px; border: 1px solid #ddd; margin: 8px 0; }
+        .modal-content .file-preview img { max-width: 100%; max-height: 500px; border-radius: 12px; display: block; margin: 0 auto; }
+        .modal-content .file-preview iframe { width: 100%; height: 500px; border: none; border-radius: 12px; }
+        
+        /* ===== APPROVAL REQUESTS ===== */
+        .approval-request {
+            background: rgba(255,255,255,0.5);
+            border-radius: 20px;
+            padding: 20px 24px;
+            margin: 12px 0;
+            border-left: 6px solid #ffc107;
+            transition: all 0.3s;
+            animation: fadeInItem 0.4s ease-out both;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .approval-request:hover { background: rgba(255,255,255,0.8); transform: translateX(6px); box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+        .approval-request.approved { border-left-color: #28a745; opacity: 0.7; background: rgba(40,167,69,0.1); }
+        .approval-request.rejected { border-left-color: #dc3545; opacity: 0.5; background: rgba(220,53,69,0.1); }
+        .approval-request .request-info { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-size: 1.05rem; }
+        .approval-request .request-info .request-title { font-weight: 700; color: #0a2b48; font-size: 1.1rem; }
+        .approval-request .request-info .request-meta { color: #1f5175; font-size: 0.9rem; }
+        .approval-request .request-details { background: rgba(255,255,255,0.3); border-radius: 12px; padding: 12px 16px; margin: 8px 0; font-size: 0.95rem; }
+        .approval-request .request-details i { color: #0a4b78; width: 20px; }
+        .approval-request .request-actions { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+        .approval-request .request-actions button { padding: 8px 20px; border-radius: 30px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 600; transition: all 0.3s; }
+        .approval-request .request-actions button:hover { transform: translateY(-3px); }
+        .approval-request .request-actions .btn-approve { background: #28a745; color: white; }
+        .approval-request .request-actions .btn-approve:hover { background: #218838; box-shadow: 0 6px 20px rgba(40,167,69,0.4); }
+        .approval-request .request-actions .btn-reject { background: #dc3545; color: white; }
+        .approval-request .request-actions .btn-reject:hover { background: #c82333; box-shadow: 0 6px 20px rgba(220,53,69,0.4); }
+        .approval-request .pending-badge { animation: pulseGlow 2s infinite; background: #ffc107; color: #212529; padding: 4px 16px; border-radius: 30px; font-size: 0.8rem; font-weight: 700; display: inline-block; }
+        .approval-request .status-badge { padding: 4px 16px; border-radius: 30px; font-size: 0.8rem; font-weight: 700; display: inline-block; }
+        .approval-request .status-badge.approved-badge { background: #28a745; color: white; }
+        .approval-request .status-badge.rejected-badge { background: #dc3545; color: white; }
+        
+        /* ===== MONITORING ===== */
+        .monitoring-item { background: rgba(255,255,255,0.3); border-radius: 12px; padding: 12px 16px; margin: 6px 0; border-left: 3px solid #0a4b78; transition: all 0.3s; animation: fadeInItem 0.3s ease-out both; }
+        .monitoring-item:hover { background: rgba(255,255,255,0.5); transform: translateX(4px); }
+        
+        /* ===== SLOGAN ===== */
+        .slogan-container { overflow: hidden; background: linear-gradient(90deg, #0a4b78, #1f7ea3, #0a4b78); padding: 10px 0; border-radius: 40px; margin: 8px 0 4px 0; position: relative; box-shadow: 0 4px 15px rgba(10, 75, 120, 0.2); animation: sloganGlow 4s ease-in-out infinite; }
+        @keyframes sloganGlow { 0%, 100% { box-shadow: 0 4px 15px rgba(10, 75, 120, 0.2); } 50% { box-shadow: 0 4px 30px rgba(10, 75, 120, 0.4); } }
+        .slogan-text { display: inline-block; white-space: nowrap; animation: scrollSlogan 35s linear infinite; color: white; font-weight: 600; font-size: 1rem; letter-spacing: 1px; padding: 0 20px; }
+        .slogan-text i { margin: 0 15px; color: #ffd700; }
+        .slogan-text .heart-icon { color: #ff4757; animation: heartbeat 1s infinite; }
+        @keyframes scrollSlogan { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+        
+        /* ===== OTHER ===== */
+        .dept-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
+        .feature-card { background: rgba(255,255,255,0.4); border-radius: 24px; padding: 24px; border: 1px solid rgba(255,255,255,0.5); transition: all 0.3s ease; text-align: center; position: relative; overflow: hidden; animation: cardFadeIn 0.6s ease-out both; }
+        .feature-card:hover { transform: translateY(-6px); background: rgba(255,255,255,0.7); box-shadow: 0 20px 40px -12px rgba(0,40,80,0.2); }
+        .feature-card i { font-size: 2.5rem; color: #0a4b78; background: rgba(10,75,120,0.08); padding: 16px; border-radius: 50%; margin-bottom: 12px; display: inline-block; transition: 0.3s; }
+        .feature-card:hover i { transform: scale(1.05); }
+        .feature-card h4 { color: #0a2b48; margin-bottom: 8px; }
+        .feature-card p { color: #1f5175; font-size: 0.9rem; line-height: 1.5; }
+        .dept-image-placeholder { background: linear-gradient(135deg, #0a4b78, #1f7ea3); border-radius: 24px; padding: 40px; text-align: center; color: white; margin: 20px 0; position: relative; overflow: hidden; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: cardFadeIn 0.8s ease-out; }
+        .dept-image-placeholder::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: rotateBg 20s linear infinite; }
+        @keyframes rotateBg { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .dept-image-placeholder h3 { font-size: 2rem; font-weight: 700; position: relative; z-index: 1; }
+        .dept-image-placeholder p { font-size: 1.1rem; opacity: 0.9; position: relative; z-index: 1; margin-top: 8px; }
+        .dept-image-placeholder .dept-icons { position: relative; z-index: 1; font-size: 3rem; margin-bottom: 12px; }
+        .dept-image-placeholder .dept-icons i { margin: 0 12px; animation: iconFloat 4s ease-in-out infinite; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 16px 0; }
+        .stats-card { background: rgba(255,255,255,0.4); border-radius: 20px; padding: 20px; text-align: center; transition: all 0.3s; animation: cardFadeIn 0.6s ease-out both; }
+        .stats-card:hover { transform: translateY(-4px); background: rgba(255,255,255,0.6); box-shadow: 0 12px 30px -8px rgba(0,40,80,0.15); }
+        .stats-card .stat-number { font-size: 2rem; font-weight: 700; color: #0a4b78; }
+        .stats-card .stat-label { font-size: 0.85rem; color: #1f5175; margin-top: 4px; }
+        .upload-progress { background: #e9ecef; border-radius: 10px; height: 8px; margin: 10px 0; overflow: hidden; }
+        .upload-progress-bar { height: 100%; background: linear-gradient(90deg, #0a4b78, #3fa3d0); transition: width 0.3s; border-radius: 10px; }
+        .file-upload-area { border: 3px dashed rgba(10,75,120,0.3); border-radius: 24px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(255,255,255,0.2); margin: 12px 0; }
+        .file-upload-area:hover, .file-upload-area.dragover { border-color: #0a4b78; background: rgba(255,255,255,0.3); transform: scale(1.01); }
+        .subject-select { width: 100%; padding: 12px 20px; border-radius: 40px; border: 1px solid rgba(0,50,90,0.15); background: rgba(255,255,255,0.6); font-size: 1rem; transition: all 0.3s; margin-top: 4px; }
+        .subject-select:focus { outline: 2px solid #1f7ea3; background: white; box-shadow: 0 0 20px rgba(31,126,163,0.15); }
+        .admin-actions { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+        .admin-actions button { padding: 2px 10px; border-radius: 20px; border: none; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; }
+        .admin-actions button:hover { transform: scale(1.05); }
+        .profile-section { background: rgba(255,255,255,0.3); border-radius: 24px; padding: 20px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.4); }
+        .profile-section .profile-field { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(0,40,70,0.05); }
+        .profile-section .profile-field:last-child { border-bottom: none; }
+        .profile-section .profile-label { font-weight: 600; color: #0a2b48; }
+        .profile-section .profile-value { color: #1f5175; }
+        .password-field { position: relative; }
+        .password-field .eye-btn-small { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #1f5175; padding: 4px; }
+        .password-field .eye-btn-small:hover { color: #0a4b78; }
+        .avatar-upload-modal { text-align: center; padding: 20px; }
+        .avatar-upload-modal .avatar-preview { width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 16px; background: linear-gradient(135deg, #0a4b78, #1f7ea3); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white; font-weight: 700; border: 3px solid #0a4b78; overflow: hidden; }
+        .avatar-upload-modal .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-upload-modal input[type="file"] { display: none; }
+        
+        /* ===== FOOTER ===== */
+        .footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid rgba(0,50,90,0.08); display: flex; justify-content: space-between; flex-wrap: wrap; color: #1f5175; font-size: 0.85rem; }
+        .footer .vcet-footer { display: flex; align-items: center; gap: 12px; }
+        .footer .vcet-footer .vcet-logo-small { width: 32px; height: 32px; background: linear-gradient(135deg, #0a4b78, #1f7ea3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.7rem; }
+        .dashboard-fade-in { animation: dashboardFade 0.8s ease-out; }
+        @keyframes dashboardFade { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
+        
+        /* ===== TOAST NOTIFICATION ===== */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -346,27 +426,42 @@
             flex-direction: column;
             gap: 10px;
             max-width: 400px;
+            width: 100%;
         }
         .toast {
-            padding: 14px 20px;
-            border-radius: 12px;
+            padding: 16px 20px;
+            border-radius: 16px;
             color: white;
             font-weight: 500;
             font-size: 0.9rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            animation: toastSlideIn 0.4s ease-out;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            animation: slideInRight 0.4s ease-out;
             display: flex;
             align-items: center;
             gap: 12px;
+            backdrop-filter: blur(10px);
         }
-        .toast.success { background: var(--success); }
-        .toast.error { background: var(--danger); }
-        .toast.warning { background: var(--warning); color: #212529; }
-        .toast.info { background: var(--primary); }
-        @keyframes toastSlideIn {
-            0% { opacity: 0; transform: translateX(100px); }
-            100% { opacity: 1; transform: translateX(0); }
+        .toast.success { background: rgba(40,167,69,0.95); }
+        .toast.error { background: rgba(220,53,69,0.95); }
+        .toast.info { background: rgba(23,162,184,0.95); }
+        .toast.warning { background: rgba(255,193,7,0.95); color: #212529; }
+        @keyframes slideInRight {
+            0% { transform: translateX(100%); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
         }
+        .toast .toast-close {
+            background: none;
+            border: none;
+            color: inherit;
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0.7;
+            margin-left: auto;
+            padding: 0 4px;
+        }
+        .toast .toast-close:hover { opacity: 1; }
+        
+        /* ===== LOADING ===== */
         .loading-spinner {
             display: inline-block;
             width: 20px;
@@ -376,9 +471,39 @@
             border-top-color: white;
             animation: spin 0.8s linear infinite;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
         }
+        .loading-overlay .loading-box {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .loading-overlay .loading-box .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e9ecef;
+            border-radius: 50%;
+            border-top-color: #0a4b78;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+        .loading-overlay .loading-box p { color: #0a2b48; font-weight: 500; }
+        
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 650px) {
             .portal { padding: 18px; }
             .login-card { padding: 28px 20px; }
@@ -392,14 +517,27 @@
             .dept-image-placeholder h3 { font-size: 1.4rem; }
             .dept-features { grid-template-columns: 1fr; }
             .glass-card .notification-badge { font-size: 0.7rem; min-width: 22px; min-height: 22px; padding: 4px 6px; top: -8px; right: -8px; }
-            .toast-container { max-width: calc(100% - 40px); }
+            .toast-container { max-width: calc(100% - 40px); top: 10px; right: 20px; }
         }
     </style>
 </head>
 <body>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== LOADING OVERLAY ===== -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-box">
+        <div class="spinner"></div>
+        <p id="loadingText">Loading...</p>
+    </div>
+</div>
+
+<!-- ===== MAIN PORTAL ===== -->
 <div class="portal" id="appContainer">
     <!-- HEADER -->
-    <div class="flex-row" style="gap:12px;">
+    <div class="flex-row">
         <div class="dept-brand">
             <i class="fas fa-heartbeat heartbeat" style="color:#1f7ea3;"></i>
             <h1>Medi Electro Vault</h1>
@@ -475,7 +613,7 @@
         </div>
     </div>
 
-    <!-- DASHBOARD PAGE -->
+    <!-- DASHBOARD -->
     <div id="dashboardPage" class="hidden dashboard-fade-in">
         <div class="flex-row" style="margin-bottom:6px;">
             <div style="display:flex; align-items:center; gap:10px;">
@@ -488,7 +626,7 @@
                     <span id="roleBadge"></span>
                     <span style="display:block; font-size:0.8rem; color:#1f5a7a;">
                         <i class="fas fa-user" style="color:#0a4b78;"></i> 
-                        <span id="userNameDisplay" class="name-display">Loading...</span>
+                        <span id="userNameDisplay" class="name-display">Not set</span>
                     </span>
                 </div>
             </div>
@@ -571,22 +709,19 @@
     </div>
 </div>
 
-<!-- TOAST CONTAINER -->
-<div class="toast-container" id="toastContainer"></div>
-
 <!-- ============================================================ -->
-<!-- FIREBASE + SUPABASE CONNECTION SCRIPT                        -->
+<!-- FIREBASE + SUPABASE CONNECTION                               -->
 <!-- ============================================================ -->
 <script type="module">
 // =============================================================
-// IMPORTS
+//  IMPORTS
 // =============================================================
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get, update, remove, push, onValue, onDisconnect, serverTimestamp } from "firebase/database";
+import { getDatabase, ref, set, get, child, push, update, remove, onValue, onDisconnect, serverTimestamp } from "firebase/database";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 
 // =============================================================
-// FIREBASE CONFIGURATION
+//  FIREBASE CONFIG
 // =============================================================
 const firebaseConfig = {
     apiKey: "AIzaSyBI5RgA04gKmMaZcUGKRDKs1yCZ0DxtWGU",
@@ -603,22 +738,24 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
-// Make Firebase available globally
+// =============================================================
+//  EXPOSE FIREBASE
+// =============================================================
 window.db = db;
 window.auth = auth;
 window.ref = ref;
 window.set = set;
 window.get = get;
+window.child = child;
+window.push = push;
 window.update = update;
 window.remove = remove;
-window.push = push;
 window.onValue = onValue;
+window.onDisconnect = onDisconnect;
 window.serverTimestamp = serverTimestamp;
 
-console.log('🔥 Firebase initialized');
-
 // =============================================================
-// SUPABASE CONFIGURATION
+//  SUPABASE CONFIG
 // =============================================================
 const SUPABASE_URL = 'https://apxinpazvkvgujcvruod.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_H80DlYfDoXxNycQtz-Z0TA_nV06-Orj';
@@ -631,13 +768,11 @@ function initSupabase() {
             console.error('❌ Supabase CDN not loaded');
             return null;
         }
-
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
             auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
         });
-        
         window.supabaseClient = supabaseClient;
-        console.log('✅ Supabase client initialized');
+        console.log('✅ Supabase initialized');
         return supabaseClient;
     } catch (error) {
         console.error('❌ Supabase init error:', error.message);
@@ -645,464 +780,61 @@ function initSupabase() {
     }
 }
 
+initSupabase();
+
 // =============================================================
-// TOAST SYSTEM
+//  GLOBAL STATE
 // =============================================================
-function showToast(message, type = 'info') {
+window.currentUser = null;
+window.currentRole = null;
+window.currentUsername = null;
+window.appData = {
+    questionPapers: { cat1: { subjects: [], files: {} }, cat2: { subjects: [], files: {} }, cat3: { subjects: [], files: {} } },
+    subjectMaterials: { subjects: [], files: {} },
+    pendingUploads: [],
+    approvedFiles: [],
+    userProfiles: {}
+};
+
+// =============================================================
+//  TOAST NOTIFICATIONS
+// =============================================================
+window.showToast = function(message, type = 'info') {
     const container = document.getElementById('toastContainer');
+    if (!container) return;
+    
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-times-circle',
-        warning: 'fa-exclamation-triangle',
-        info: 'fa-info-circle'
-    };
-    toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
+    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+    toast.innerHTML = `
+        <i class="fas ${icons[type] || icons.info}"></i>
+        <span>${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+    `;
     container.appendChild(toast);
+    
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100px)';
-        setTimeout(() => toast.remove(), 400);
-    }, 4000);
-}
-window.showToast = showToast;
+        if (toast.parentElement) toast.remove();
+    }, 5000);
+};
 
 // =============================================================
-// TEST CONNECTIONS
+//  LOADING OVERLAY
 // =============================================================
-async function testFirebaseConnection() {
-    const statusEl = document.getElementById('firebaseStatus');
-    try {
-        statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-        statusEl.className = 'status-badge testing';
-        
-        await set(ref(db, 'test_connection'), { timestamp: Date.now() });
-        const snapshot = await get(ref(db, 'test_connection'));
-        
-        if (snapshot.exists()) {
-            console.log('✅ Firebase Connected');
-            statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Firebase ✅';
-            statusEl.className = 'status-badge connected';
-            return true;
-        }
-        throw new Error('No data');
-    } catch (error) {
-        console.error('❌ Firebase connection failed:', error.message);
-        statusEl.innerHTML = '<i class="fas fa-times-circle"></i> Firebase Error';
-        statusEl.className = 'status-badge disconnected';
-        return false;
-    }
-}
-
-async function testSupabaseConnection() {
-    const statusEl = document.getElementById('supabaseStatus');
-    try {
-        statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-        statusEl.className = 'status-badge testing';
-        
-        if (!window.supabaseClient) throw new Error('Client not initialized');
-        
-        const { error } = await window.supabaseClient
-            .from('files')
-            .select('*', { count: 'exact', head: true });
-
-        if (error && error.code === '42P01') {
-            console.log('✅ Supabase Connected (table "files" not found)');
-            statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
-            statusEl.className = 'status-badge connected';
-            return true;
-        }
-
-        if (error) throw error;
-
-        console.log('✅ Supabase Connected');
-        statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
-        statusEl.className = 'status-badge connected';
-        return true;
-
-    } catch (error) {
-        console.error('❌ Supabase connection failed:', error.message);
-        statusEl.innerHTML = '<i class="fas fa-times-circle"></i> Supabase Error';
-        statusEl.className = 'status-badge disconnected';
-        return false;
-    }
-}
+window.showLoading = function(text = 'Loading...') {
+    const overlay = document.getElementById('loadingOverlay');
+    const textEl = document.getElementById('loadingText');
+    if (overlay) { overlay.classList.remove('hidden'); if (textEl) textEl.textContent = text; }
+};
+window.hideLoading = function() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.classList.add('hidden');
+};
 
 // =============================================================
-// USER MANAGEMENT - FIREBASE
+//  PASSWORD TOGGLE
 // =============================================================
-async function saveUserProfile(userId, profileData) {
-    try {
-        await set(ref(db, `users/${userId}`), {
-            ...profileData,
-            lastLogin: serverTimestamp(),
-            online: true
-        });
-        return true;
-    } catch (error) {
-        console.error('Error saving profile:', error);
-        return false;
-    }
-}
-
-async function getUserProfile(userId) {
-    try {
-        const snapshot = await get(ref(db, `users/${userId}`));
-        return snapshot.exists() ? snapshot.val() : null;
-    } catch (error) {
-        console.error('Error getting profile:', error);
-        return null;
-    }
-}
-
-async function updateUserOnlineStatus(userId, online) {
-    try {
-        await update(ref(db, `users/${userId}`), { online });
-        return true;
-    } catch (error) {
-        console.error('Error updating online status:', error);
-        return false;
-    }
-}
-
-// =============================================================
-// AUTHENTICATION
-// =============================================================
-async function loginUser(username, password, role) {
-    try {
-        // Check if user exists in Firebase
-        const userRef = ref(db, `users/${username}`);
-        const snapshot = await get(userRef);
-        
-        if (!snapshot.exists()) {
-            // New user - create profile
-            const profileData = {
-                username,
-                role,
-                name: username,
-                department: 'Medical Electronics',
-                registeredAt: serverTimestamp(),
-                online: true
-            };
-            await saveUserProfile(username, profileData);
-            showToast('Welcome! Profile created.', 'success');
-        } else {
-            // Existing user - update online status
-            await updateUserOnlineStatus(username, true);
-            const userData = snapshot.val();
-            showToast(`Welcome back, ${userData.name || username}!`, 'success');
-        }
-        
-        // Set session
-        sessionStorage.setItem('currentUser', JSON.stringify({ username, role }));
-        
-        return { success: true, user: { username, role } };
-    } catch (error) {
-        console.error('Login error:', error);
-        showToast('Login failed: ' + error.message, 'error');
-        return { success: false, error: error.message };
-    }
-}
-
-async function logoutUser() {
-    try {
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
-        if (currentUser.username) {
-            await updateUserOnlineStatus(currentUser.username, false);
-        }
-        sessionStorage.removeItem('currentUser');
-        showToast('Logged out successfully', 'info');
-        return true;
-    } catch (error) {
-        console.error('Logout error:', error);
-        return false;
-    }
-}
-
-// =============================================================
-// SUPABASE FILE OPERATIONS
-// =============================================================
-async function uploadFileToSupabase(file, subject, uploadedBy) {
-    try {
-        showToast('Uploading to Supabase...', 'info');
-        
-        // Upload to storage
-        const filePath = `uploads/${Date.now()}_${file.name}`;
-        const { data: uploadData, error: uploadError } = await window.supabaseClient
-            .storage
-            .from('pdf-files')
-            .upload(filePath, file, { cacheControl: '3600', upsert: false });
-
-        if (uploadError) throw new Error('Storage upload failed: ' + uploadError.message);
-
-        // Get public URL
-        const { data: urlData } = window.supabaseClient
-            .storage
-            .from('pdf-files')
-            .getPublicUrl(filePath);
-
-        // Save to files table
-        const fileData = {
-            file_name: file.name,
-            subject: subject,
-            uploaded_by: uploadedBy,
-            file_url: urlData.publicUrl,
-            uploaded_at: new Date().toISOString(),
-            approved: true,
-            approved_by: uploadedBy,
-            approved_at: new Date().toISOString()
-        };
-
-        const { data: dbData, error: dbError } = await window.supabaseClient
-            .from('files')
-            .insert([fileData])
-            .select();
-
-        if (dbError) throw new Error('Database insert failed: ' + dbError.message);
-
-        showToast(`✅ ${file.name} uploaded successfully!`, 'success');
-        
-        // Notify all users via Firebase
-        await push(ref(db, 'notifications'), {
-            type: 'file_uploaded',
-            message: `${uploadedBy} uploaded ${file.name}`,
-            subject: subject,
-            timestamp: serverTimestamp(),
-            read: false
-        });
-
-        return { success: true, data: dbData[0] };
-    } catch (error) {
-        console.error('Upload error:', error);
-        showToast('Upload failed: ' + error.message, 'error');
-        return { success: false, error: error.message };
-    }
-}
-
-// =============================================================
-// SUPABASE FILE FETCH
-// =============================================================
-async function fetchFilesFromSupabase() {
-    try {
-        const { data, error } = await window.supabaseClient
-            .from('files')
-            .select('*')
-            .order('uploaded_at', { ascending: false });
-
-        if (error) throw error;
-        return { success: true, data };
-    } catch (error) {
-        console.error('Fetch error:', error);
-        return { success: false, error: error.message };
-    }
-}
-
-// =============================================================
-// APPROVAL SYSTEM
-// =============================================================
-async function submitApprovalRequest(fileData, subject, uploadedBy) {
-    try {
-        // Store in Firebase pending_uploads
-        const requestRef = push(ref(db, 'pending_uploads'));
-        await set(requestRef, {
-            id: requestRef.key,
-            file_name: fileData.name,
-            subject: subject,
-            uploaded_by: uploadedBy,
-            uploaded_at: serverTimestamp(),
-            status: 'pending',
-            file_data: fileData // Base64 or file data
-        });
-
-        // Notify admins
-        await push(ref(db, 'notifications'), {
-            type: 'approval_request',
-            message: `${uploadedBy} requested approval for ${fileData.name}`,
-            subject: subject,
-            requestId: requestRef.key,
-            timestamp: serverTimestamp(),
-            read: false
-        });
-
-        showToast('Approval request submitted!', 'success');
-        return { success: true, requestId: requestRef.key };
-    } catch (error) {
-        console.error('Approval request error:', error);
-        showToast('Failed to submit request: ' + error.message, 'error');
-        return { success: false, error: error.message };
-    }
-}
-
-async function approveRequest(requestId, approvedBy) {
-    try {
-        // Get request from Firebase
-        const snapshot = await get(ref(db, `pending_uploads/${requestId}`));
-        if (!snapshot.exists()) {
-            throw new Error('Request not found');
-        }
-        
-        const request = snapshot.val();
-        
-        // Upload to Supabase
-        const result = await uploadFileToSupabase(
-            request.file_data,
-            request.subject,
-            request.uploaded_by
-        );
-        
-        if (!result.success) throw new Error(result.error);
-        
-        // Update Firebase request status
-        await update(ref(db, `pending_uploads/${requestId}`), {
-            status: 'approved',
-            approved_by: approvedBy,
-            approved_at: serverTimestamp(),
-            file_id: result.data.id
-        });
-        
-        // Notify
-        await push(ref(db, 'notifications'), {
-            type: 'request_approved',
-            message: `✅ ${request.uploaded_by}'s upload was approved!`,
-            subject: request.subject,
-            timestamp: serverTimestamp(),
-            read: false
-        });
-        
-        showToast('Request approved!', 'success');
-        return { success: true };
-    } catch (error) {
-        console.error('Approve error:', error);
-        showToast('Failed to approve: ' + error.message, 'error');
-        return { success: false, error: error.message };
-    }
-}
-
-async function rejectRequest(requestId, rejectedBy) {
-    try {
-        await update(ref(db, `pending_uploads/${requestId}`), {
-            status: 'rejected',
-            rejected_by: rejectedBy,
-            rejected_at: serverTimestamp()
-        });
-        
-        showToast('Request rejected', 'warning');
-        return { success: true };
-    } catch (error) {
-        console.error('Reject error:', error);
-        return { success: false, error: error.message };
-    }
-}
-
-// =============================================================
-// REALTIME LISTENERS
-// =============================================================
-function listenToPendingRequests(callback) {
-    const requestsRef = ref(db, 'pending_uploads');
-    onValue(requestsRef, (snapshot) => {
-        const data = snapshot.val();
-        if (callback) callback(data);
-        updatePendingBadge(data);
-    });
-}
-
-function listenToNotifications(callback) {
-    const notificationsRef = ref(db, 'notifications');
-    onValue(notificationsRef, (snapshot) => {
-        const data = snapshot.val();
-        if (callback) callback(data);
-    });
-}
-
-function listenToUserStatus(callback) {
-    const usersRef = ref(db, 'users');
-    onValue(usersRef, (snapshot) => {
-        const data = snapshot.val();
-        if (callback) callback(data);
-    });
-}
-
-function updatePendingBadge(data) {
-    const badge = document.getElementById('pendingCount');
-    if (!badge) return;
-    
-    if (data) {
-        const pending = Object.values(data).filter(r => r.status === 'pending').length;
-        if (pending > 0 && window.currentRole === 'admin') {
-            badge.style.display = 'flex';
-            badge.textContent = pending;
-        } else {
-            badge.style.display = 'none';
-        }
-    } else {
-        badge.style.display = 'none';
-    }
-}
-
-// =============================================================
-// INIT
-// =============================================================
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Initializing Medi Electro Vault...');
-    
-    // Initialize Supabase
-    initSupabase();
-    
-    // Test connections
-    await testFirebaseConnection();
-    await testSupabaseConnection();
-    
-    // Check for existing session
-    const sessionData = sessionStorage.getItem('currentUser');
-    if (sessionData) {
-        try {
-            const user = JSON.parse(sessionData);
-            if (user.username) {
-                const profile = await getUserProfile(user.username);
-                if (profile) {
-                    window.currentUser = user;
-                    window.currentRole = user.role;
-                    showDashboard(user.username, user.role, profile.name || user.username);
-                }
-            }
-        } catch (e) {
-            console.warn('Session error:', e);
-        }
-    }
-});
-
-// =============================================================
-// EXPOSE GLOBALLY
-// =============================================================
-window.loginUser = loginUser;
-window.logoutUser = logoutUser;
-window.getUserProfile = getUserProfile;
-window.saveUserProfile = saveUserProfile;
-window.updateUserOnlineStatus = updateUserOnlineStatus;
-window.uploadFileToSupabase = uploadFileToSupabase;
-window.fetchFilesFromSupabase = fetchFilesFromSupabase;
-window.submitApprovalRequest = submitApprovalRequest;
-window.approveRequest = approveRequest;
-window.rejectRequest = rejectRequest;
-window.listenToPendingRequests = listenToPendingRequests;
-window.listenToNotifications = listenToNotifications;
-window.listenToUserStatus = listenToUserStatus;
-window.showToast = showToast;
-window.testFirebase = testFirebaseConnection;
-window.testSupabase = testSupabaseConnection;
-
-console.log('✅ Medi Electro Vault - Professional Rebuild Complete!');
-</script>
-
-<!-- ============================================================ -->
-<!-- APPLICATION UI LOGIC                                        -->
-<!-- ============================================================ -->
-<script>
-// ============================================================
-// UI LOGIC - PASSWORD TOGGLE
-// ============================================================
-function togglePassword(inputId, btn) {
+window.togglePassword = function(inputId, btn) {
     const input = document.getElementById(inputId);
     if (!input) return;
     if (input.type === 'password') {
@@ -1112,10 +844,9 @@ function togglePassword(inputId, btn) {
         input.type = 'password';
         btn.innerHTML = '<i class="fas fa-eye"></i>';
     }
-}
-window.togglePassword = togglePassword;
+};
 
-function togglePasswordField(inputId) {
+window.togglePasswordField = function(inputId) {
     const input = document.getElementById(inputId);
     if (!input) return;
     const btn = input.parentElement.querySelector('.eye-btn-small');
@@ -1127,27 +858,24 @@ function togglePasswordField(inputId) {
         input.type = 'password';
         btn.innerHTML = '<i class="fas fa-eye"></i>';
     }
-}
-window.togglePasswordField = togglePasswordField;
+};
 
-// ============================================================
-// DATE HELPERS
-// ============================================================
-function formatDateShort(timestamp) {
+// =============================================================
+//  DATE HELPERS
+// =============================================================
+window.formatDateShort = function(timestamp) {
     if (!timestamp) return 'N/A';
     const date = new Date(timestamp);
     return String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+String(date.getFullYear()).slice(-2);
-}
-window.formatDateShort = formatDateShort;
+};
 
-function formatDateTime(timestamp) {
+window.formatDateTime = function(timestamp) {
     if (!timestamp) return 'N/A';
     const date = new Date(timestamp);
-    return String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+String(date.getFullYear()).slice(-2)+' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0')+':'+String(date.getSeconds()).padStart(2,'0');
-}
-window.formatDateTime = formatDateTime;
+    return String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+String(date.getFullYear()).slice(-2)+' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
+};
 
-function isValidDate(dateStr) {
+window.isValidDate = function(dateStr) {
     if (!dateStr) return false;
     const parts = dateStr.split('/');
     if (parts.length !== 3) return false;
@@ -1156,55 +884,534 @@ function isValidDate(dateStr) {
     if (day<1||day>31||month<1||month>12||year<1900||year>2100) return false;
     const date = new Date(year, month-1, day);
     return date.getFullYear()===year && date.getMonth()===month-1 && date.getDate()===day;
+};
+
+// =============================================================
+//  GENERATE ID
+// =============================================================
+window.generateId = function() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+};
+
+// =============================================================
+//  FORMAT FILE SIZE
+// =============================================================
+window.formatFileSize = function(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+};
+
+// =============================================================
+//  GET FILE ICON
+// =============================================================
+window.getFileIcon = function(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['jpg','jpeg','png','gif','bmp','webp','svg'].includes(ext)) return 'fa-file-image';
+    if (ext === 'pdf') return 'fa-file-pdf';
+    if (['doc','docx','txt','md','rtf'].includes(ext)) return 'fa-file-word';
+    return 'fa-file';
+};
+
+window.getFileColor = function(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['jpg','jpeg','png','gif','bmp','webp','svg'].includes(ext)) return '#e67e22';
+    if (ext === 'pdf') return '#c0392b';
+    if (['doc','docx','txt','md','rtf'].includes(ext)) return '#2b5797';
+    return '#6c757d';
+};
+
+// =============================================================
+//  ROLE CHECKS
+// =============================================================
+window.isAdmin = function() { return window.currentRole === 'admin'; };
+window.isFaculty = function() { return window.currentRole === 'faculty'; };
+window.isStudent = function() { return window.currentRole === 'student'; };
+window.isAdminOrFaculty = function() { return window.isAdmin() || window.isFaculty(); };
+
+// =============================================================
+//  TEST CONNECTIONS
+// =============================================================
+async function testFirebaseConnection() {
+    const statusEl = document.getElementById('firebaseStatus');
+    try {
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+            statusEl.className = 'status-badge testing';
+        }
+        await set(ref(db, 'test_connection'), { timestamp: Date.now(), message: 'Firebase connected!' });
+        const snapshot = await get(child(ref(db), 'test_connection'));
+        if (snapshot.exists()) {
+            console.log('✅ Firebase Connected');
+            if (statusEl) {
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Firebase ✅';
+                statusEl.className = 'status-badge connected';
+            }
+            return true;
+        }
+        throw new Error('No data');
+    } catch (error) {
+        console.error('❌ Firebase error:', error.message);
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="fas fa-times-circle"></i> Firebase Error';
+            statusEl.className = 'status-badge disconnected';
+        }
+        return false;
+    }
 }
-window.isValidDate = isValidDate;
 
-// ============================================================
-// USER AVATAR
-// ============================================================
-let userAvatarData = {};
+async function testSupabaseConnection() {
+    const statusEl = document.getElementById('supabaseStatus');
+    try {
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+            statusEl.className = 'status-badge testing';
+        }
+        if (!window.supabaseClient) throw new Error('Client not initialized');
+        const { data, error } = await window.supabaseClient
+            .from('files')
+            .select('*', { count: 'exact', head: true });
+        if (error && error.code === '42P01') {
+            console.log('✅ Supabase Connected (table missing)');
+            if (statusEl) {
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
+                statusEl.className = 'status-badge connected';
+            }
+            return true;
+        }
+        if (error) throw error;
+        console.log('✅ Supabase Connected');
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
+            statusEl.className = 'status-badge connected';
+        }
+        return true;
+    } catch (error) {
+        console.error('❌ Supabase error:', error.message);
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="fas fa-times-circle"></i> Supabase Error';
+            statusEl.className = 'status-badge disconnected';
+        }
+        return false;
+    }
+}
 
-function getAvatarInitials(username) {
+// =============================================================
+//  USER PROFILE MANAGEMENT
+// =============================================================
+async function getUserProfile(username) {
+    try {
+        const snapshot = await get(child(ref(db), `users/${username}`));
+        if (snapshot.exists()) {
+            return snapshot.val();
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+    }
+}
+
+async function saveUserProfile(username, profileData) {
+    try {
+        await set(ref(db, `users/${username}`), {
+            ...profileData,
+            lastLogin: serverTimestamp()
+        });
+        return true;
+    } catch (error) {
+        console.error('Error saving profile:', error);
+        return false;
+    }
+}
+
+async function updateUserOnlineStatus(username, status) {
+    try {
+        await update(ref(db, `users/${username}`), {
+            online: status,
+            lastSeen: serverTimestamp()
+        });
+        // Set onDisconnect to mark offline
+        if (status) {
+            const onDisconnectRef = ref(db, `users/${username}/online`);
+            onDisconnect(onDisconnectRef).set(false);
+        }
+    } catch (error) {
+        console.error('Error updating status:', error);
+    }
+}
+
+// =============================================================
+//  AUTH FUNCTIONS
+// =============================================================
+async function loginUser(username, password, role) {
+    try {
+        showLoading('Signing in...');
+        
+        // Check if user exists
+        const profile = await getUserProfile(username);
+        
+        if (!profile) {
+            // New user - create profile
+            const newProfile = {
+                username,
+                role,
+                registeredAt: Date.now(),
+                online: true,
+                displayName: role === 'student' ? username : username,
+                department: 'Medical Electronics',
+                avatar: null
+            };
+            await saveUserProfile(username, newProfile);
+            await updateUserOnlineStatus(username, true);
+            
+            window.currentUser = { username, role };
+            window.currentRole = role;
+            window.currentUsername = username;
+            
+            showToast(`Welcome ${username}! Profile created.`, 'success');
+            showDashboard(username, role);
+            hideLoading();
+            return true;
+        }
+        
+        // Existing user - validate password
+        // For demo, we accept any valid date as password
+        // In production, use Firebase Auth
+        
+        await updateUserOnlineStatus(username, true);
+        
+        window.currentUser = { username, role: profile.role };
+        window.currentRole = profile.role;
+        window.currentUsername = username;
+        
+        showToast(`Welcome back, ${profile.displayName || username}!`, 'success');
+        showDashboard(username, profile.role);
+        hideLoading();
+        return true;
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        showToast('Login failed: ' + error.message, 'error');
+        hideLoading();
+        return false;
+    }
+}
+
+function logoutUser() {
+    if (window.currentUsername) {
+        updateUserOnlineStatus(window.currentUsername, false);
+    }
+    window.currentUser = null;
+    window.currentRole = null;
+    window.currentUsername = null;
+    document.getElementById('loginPage').classList.remove('hidden');
+    document.getElementById('dashboardPage').classList.add('hidden');
+    showToast('Logged out successfully', 'info');
+}
+
+// =============================================================
+//  AVATAR FUNCTIONS
+// =============================================================
+window.getAvatarInitials = function(username) {
     if (!username) return 'U';
     const parts = username.split(' ');
-    if (parts.length >= 2) return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
-    return username.substring(0,2).toUpperCase();
-}
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+    return username.substring(0, 2).toUpperCase();
+};
 
-function updateAvatarDisplay() {
+window.updateAvatarDisplay = function() {
     const initialsEl = document.getElementById('avatarInitials');
     const imageEl = document.getElementById('avatarImage');
     if (!initialsEl || !imageEl) return;
-    if (userAvatarData && userAvatarData.data) {
-        initialsEl.style.display = 'none';
-        imageEl.style.display = 'block';
-        imageEl.src = userAvatarData.data;
+    // Check if avatar is stored in Firebase
+    if (window.currentUsername) {
+        get(child(ref(db), `users/${window.currentUsername}/avatar`)).then(snapshot => {
+            if (snapshot.exists()) {
+                const avatarData = snapshot.val();
+                if (avatarData) {
+                    initialsEl.style.display = 'none';
+                    imageEl.style.display = 'block';
+                    imageEl.src = avatarData;
+                    return;
+                }
+            }
+            initialsEl.style.display = 'flex';
+            imageEl.style.display = 'none';
+            initialsEl.textContent = window.getAvatarInitials(window.currentUsername);
+        });
     } else {
         initialsEl.style.display = 'flex';
         imageEl.style.display = 'none';
-        initialsEl.textContent = getAvatarInitials(window.currentUser?.username || 'U');
+        initialsEl.textContent = 'U';
+    }
+};
+
+window.showAvatarUpload = function() {
+    if (!window.currentUsername) return;
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3><i class="fas fa-user-circle" style="color:#0a4b78;"></i> Update Profile Picture</h3>
+            <div class="avatar-upload-modal">
+                <div class="avatar-preview" id="avatarPreview">
+                    ${window.currentUsername ? window.getAvatarInitials(window.currentUsername) : 'U'}
+                </div>
+                <p style="color:#1f5175; margin-bottom:12px;">Upload a new profile picture</p>
+                <input type="file" id="avatarFileInput" accept="image/*" />
+                <button class="btn-primary" onclick="document.getElementById('avatarFileInput').click()"><i class="fas fa-upload"></i> Choose Image</button>
+                <div style="margin-top:12px;">
+                    <button class="btn-danger" onclick="removeAvatar()" style="margin-right:8px;"><i class="fas fa-trash"></i> Remove</button>
+                    <button class="btn-outline" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i> Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    document.getElementById('avatarFileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async function(ev) {
+                const dataUrl = ev.target.result;
+                // Save to Firebase
+                try {
+                    await set(ref(db, `users/${window.currentUsername}/avatar`), dataUrl);
+                    window.updateAvatarDisplay();
+                    document.querySelector('.modal').remove();
+                    showToast('Avatar updated successfully!', 'success');
+                } catch (error) {
+                    showToast('Failed to update avatar', 'error');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+};
+
+window.removeAvatar = async function() {
+    if (confirm('Remove your profile picture?')) {
+        try {
+            await remove(ref(db, `users/${window.currentUsername}/avatar`));
+            window.updateAvatarDisplay();
+            document.querySelector('.modal').remove();
+            showToast('Avatar removed', 'info');
+        } catch (error) {
+            showToast('Failed to remove avatar', 'error');
+        }
+    }
+};
+
+// =============================================================
+//  SHOW DASHBOARD
+// =============================================================
+function showDashboard(username, role) {
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('dashboardPage').classList.remove('hidden');
+    
+    const displayName = role === 'admin' ? 'Admin' : username;
+    document.getElementById('greetingUser').textContent = displayName + (role === 'admin' ? ' (Admin)' : role === 'faculty' ? ' (Faculty)' : '');
+    
+    if (role === 'admin') {
+        document.getElementById('roleBadge').innerHTML = '<span class="admin-badge"><i class="fas fa-user-shield"></i> Admin</span>';
+    } else {
+        document.getElementById('roleBadge').innerHTML = '';
+    }
+    
+    // Get user profile for display name
+    getUserProfile(username).then(profile => {
+        if (profile && profile.displayName) {
+            document.getElementById('userNameDisplay').textContent = profile.displayName;
+        }
+    });
+    
+    // Update avatar
+    window.updateAvatarDisplay();
+    
+    // Show/hide admin-only cards
+    document.getElementById('approvalsCard').style.display = role === 'admin' ? 'block' : 'none';
+    document.getElementById('monitoringCard').style.display = (role === 'admin' || role === 'faculty') ? 'block' : 'none';
+    
+    // Load data
+    loadAppData();
+    setupRealtimeListeners();
+}
+
+// =============================================================
+//  LOAD APP DATA
+// =============================================================
+async function loadAppData() {
+    try {
+        // Load subjects
+        const subjectsSnapshot = await get(child(ref(db), 'subjects'));
+        if (subjectsSnapshot.exists()) {
+            const data = subjectsSnapshot.val();
+            window.appData.questionPapers = data.questionPapers || window.appData.questionPapers;
+            window.appData.subjectMaterials = data.subjectMaterials || window.appData.subjectMaterials;
+        }
+        
+        // Load pending uploads
+        const pendingSnapshot = await get(child(ref(db), 'pendingUploads'));
+        if (pendingSnapshot.exists()) {
+            const data = pendingSnapshot.val();
+            window.appData.pendingUploads = Object.values(data);
+        }
+        
+        // Load approved files from Supabase
+        await loadApprovedFiles();
+        
+        updateCounts();
+        updatePendingBadge();
+        
+    } catch (error) {
+        console.error('Error loading data:', error);
     }
 }
-window.updateAvatarDisplay = updateAvatarDisplay;
 
-function showAvatarUpload() {
-    showToast('Avatar upload coming soon!', 'info');
+async function loadApprovedFiles() {
+    try {
+        if (!window.supabaseClient) return;
+        const { data, error } = await window.supabaseClient
+            .from('files')
+            .select('*')
+            .eq('approved', true)
+            .order('uploaded_at', { ascending: false });
+        
+        if (error) throw error;
+        window.appData.approvedFiles = data || [];
+    } catch (error) {
+        console.error('Error loading approved files:', error);
+    }
 }
-window.showAvatarUpload = showAvatarUpload;
 
-// ============================================================
-// PAGE NAVIGATION
-// ============================================================
-let uploadCategory = 'questionPapers';
+function updateCounts() {
+    let qp = 0, sm = 0;
+    // Count from approved files
+    window.appData.approvedFiles.forEach(file => {
+        if (file.category === 'Question Papers') qp++;
+        else if (file.category === 'Subject Materials') sm++;
+    });
+    document.getElementById('qpCount').textContent = qp + ' files';
+    document.getElementById('smCount').textContent = sm + ' files';
+}
 
-function showPage(page) {
+function updatePendingBadge() {
+    const pending = window.appData.pendingUploads ? window.appData.pendingUploads.filter(p => p.status === 'pending').length : 0;
+    const badge = document.getElementById('pendingCount');
+    if (badge) {
+        if (pending > 0 && window.isAdmin()) {
+            badge.style.display = 'flex';
+            badge.textContent = pending;
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+// =============================================================
+//  REALTIME LISTENERS
+// =============================================================
+let listeners = [];
+
+function setupRealtimeListeners() {
+    // Clear old listeners
+    listeners.forEach(listener => listener());
+    listeners = [];
+    
+    // Listen to subjects
+    const subjectsRef = ref(db, 'subjects');
+    const subjectsListener = onValue(subjectsRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            window.appData.questionPapers = data.questionPapers || window.appData.questionPapers;
+            window.appData.subjectMaterials = data.subjectMaterials || window.appData.subjectMaterials;
+            refreshCurrentPage();
+        }
+    });
+    listeners.push(subjectsListener);
+    
+    // Listen to pending uploads
+    const pendingRef = ref(db, 'pendingUploads');
+    const pendingListener = onValue(pendingRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            window.appData.pendingUploads = Object.values(data);
+        } else {
+            window.appData.pendingUploads = [];
+        }
+        updatePendingBadge();
+        refreshCurrentPage();
+    });
+    listeners.push(pendingListener);
+    
+    // Listen to user profiles for online status
+    const usersRef = ref(db, 'users');
+    const usersListener = onValue(usersRef, (snapshot) => {
+        // Update online status display if on monitoring page
+        const container = document.getElementById('pageContainer');
+        if (container && container.querySelector('.page-container h2')?.textContent.includes('Monitoring')) {
+            renderMonitoringPage(container);
+        }
+    });
+    listeners.push(usersListener);
+    
+    // Listen to approved files from Supabase (polling)
+    // For real-time, we use Firebase notifications
+    const notificationsRef = ref(db, 'notifications');
+    const notificationsListener = onValue(notificationsRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            // Check if there's a new file notification
+            const notifications = Object.values(data);
+            const latest = notifications[notifications.length - 1];
+            if (latest && latest.type === 'file_uploaded' && latest.timestamp > Date.now() - 5000) {
+                loadApprovedFiles().then(() => {
+                    updateCounts();
+                    refreshCurrentPage();
+                    showToast(`New file uploaded: ${latest.fileName}`, 'success');
+                });
+            }
+        }
+    });
+    listeners.push(notificationsListener);
+}
+
+// =============================================================
+//  REFRESH CURRENT PAGE
+// =============================================================
+function refreshCurrentPage() {
+    const container = document.getElementById('pageContainer');
+    if (!container || container.innerHTML === '') return;
+    const h2 = container.querySelector('.page-container h2');
+    if (!h2) return;
+    const text = h2.textContent;
+    if (text.includes('Question Papers')) renderQuestionPapers(container);
+    else if (text.includes('Subject Materials')) renderSubjectMaterials(container);
+    else if (text.includes('Upload')) renderUploadPage(container);
+    else if (text.includes('Search')) renderSearchPage(container);
+    else if (text.includes('My Uploads')) renderMyUploads(container);
+    else if (text.includes('Approval')) renderApprovalsPage(container);
+    else if (text.includes('Monitoring')) renderMonitoringPage(container);
+    else if (text.includes('Profile')) renderProfilePage(container);
+    else if (text.includes('Medical Electronics Department')) renderDepartmentPage(container);
+}
+
+// =============================================================
+//  PAGE NAVIGATION
+// =============================================================
+window.showPage = function(page) {
     const container = document.getElementById('pageContainer');
     if (!container) return;
     if (page === 'dashboard') { container.innerHTML = ''; return; }
     
-    // Check permissions
-    if (page === 'approvals' && window.currentRole !== 'admin') {
-        container.innerHTML = '<div class="page-container"><p style="color:#dc3545; text-align:center; padding:40px;"><i class="fas fa-lock" style="font-size:2rem; display:block; margin-bottom:12px;"></i>Access Denied. Only Admin can access approvals.</p></div>';
+    if (page === 'approvals' && !window.isAdmin()) {
+        container.innerHTML = '<div class="page-container"><p style="color:#dc3545; text-align:center; padding:40px;"><i class="fas fa-lock" style="font-size:2rem; display:block; margin-bottom:12px;"></i>Access Denied. Admin only.</p></div>';
+        return;
+    }
+    if (page === 'monitoring' && !window.isAdminOrFaculty()) {
+        container.innerHTML = '<div class="page-container"><p style="color:#dc3545; text-align:center; padding:40px;"><i class="fas fa-lock" style="font-size:2rem; display:block; margin-bottom:12px;"></i>Access Denied. Admin/Faculty only.</p></div>';
         return;
     }
     
@@ -1220,12 +1427,11 @@ function showPage(page) {
         case 'department': renderDepartmentPage(container); break;
         default: container.innerHTML = '<p>Page not found</p>';
     }
-}
-window.showPage = showPage;
+};
 
-// ============================================================
-// DEPARTMENT PAGE
-// ============================================================
+// =============================================================
+//  RENDER: DEPARTMENT
+// =============================================================
 function renderDepartmentPage(container) {
     container.innerHTML = `
         <div class="page-container">
@@ -1250,142 +1456,306 @@ function renderDepartmentPage(container) {
             </div>
         </div>`;
 }
-window.renderDepartmentPage = renderDepartmentPage;
 
-// ============================================================
-// PROFILE PAGE
-// ============================================================
+// =============================================================
+//  RENDER: PROFILE
+// =============================================================
 function renderProfilePage(container) {
-    const user = window.currentUser;
-    if (!user) {
-        container.innerHTML = '<div class="page-container"><p>Please login first</p></div>';
-        return;
-    }
+    const username = window.currentUsername;
+    if (!username) { container.innerHTML = '<div class="page-container"><p>Please login</p></div>'; return; }
     
-    // Get profile from Firebase
-    window.getUserProfile(user.username).then(profile => {
-        if (!profile) {
-            container.innerHTML = '<div class="page-container"><p>Profile not found</p></div>';
-            return;
-        }
+    getUserProfile(username).then(profile => {
+        const storedName = profile?.displayName || 'Not set';
+        const email = profile?.email || '';
+        const registeredDate = profile?.registeredAt ? formatDateShort(profile.registeredAt) : 'N/A';
         
         container.innerHTML = `
             <div class="page-container">
                 <div class="page-header"><h2><i class="fas fa-user-cog" style="color:#0a4b78;"></i> Profile Settings</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
                 <div class="profile-section">
                     <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-user-circle" style="color:#0a4b78;"></i> User Information</h3>
-                    <div class="profile-field"><span class="profile-label">Username</span><span class="profile-value">${user.username}</span></div>
-                    <div class="profile-field"><span class="profile-label">Role</span><span class="profile-value">${user.role}</span></div>
-                    <div class="profile-field"><span class="profile-label">Name</span><span class="profile-value">${profile.name || 'Not set'}</span></div>
-                    <div class="profile-field"><span class="profile-label">Department</span><span class="profile-value">${profile.department || 'Medical Electronics'}</span></div>
+                    <div class="profile-field"><span class="profile-label">Username</span><span class="profile-value">${username}</span></div>
+                    <div class="profile-field"><span class="profile-label">Role</span><span class="profile-value">${window.currentRole || 'N/A'}</span></div>
+                    <div class="profile-field"><span class="profile-label">Registered</span><span class="profile-value">${registeredDate}</span></div>
+                    <div class="profile-field"><span class="profile-label">Name</span><span class="profile-value">${storedName}</span></div>
+                    <div class="profile-field"><span class="profile-label">Online Status</span><span class="profile-value">${profile?.online ? '🟢 Online' : '⚪ Offline'}</span></div>
                 </div>
                 <div class="profile-section">
-                    <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-user-edit" style="color:#0a4b78;"></i> Update Name</h3>
+                    <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-user-edit" style="color:#0a4b78;"></i> Update Your Name</h3>
+                    <p style="color:#1f5175; font-size:0.9rem; margin-bottom:12px;">Enter your full name to be displayed on the portal.</p>
                     <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                        <input type="text" id="profileNameInput" class="login-input" placeholder="Enter your full name" value="${profile.name || ''}" style="flex:1; max-width:400px;" />
-                        <button class="btn-primary" onclick="updateProfileName()"><i class="fas fa-save"></i> Update</button>
+                        <input type="text" id="profileNameInput" class="login-input" placeholder="Enter your full name" value="${storedName}" style="flex:1; max-width:400px;" />
+                        <button class="btn-primary" onclick="saveNameProfile()"><i class="fas fa-save"></i> Update Name</button>
                     </div>
                     <div id="nameStatus" style="margin-top:12px;"></div>
                 </div>
                 <div class="profile-section">
+                    <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-envelope" style="color:#0a4b78;"></i> Email</h3>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <input type="email" id="profileEmailInput" class="login-input" placeholder="Enter your email" value="${email}" style="flex:1; max-width:400px;" />
+                        <button class="btn-primary" onclick="saveEmailProfile()"><i class="fas fa-save"></i> Save Email</button>
+                    </div>
+                    <div id="emailStatus" style="margin-top:12px;"></div>
+                </div>
+                <div class="profile-section">
                     <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-sign-out-alt" style="color:#dc3545;"></i> Logout</h3>
-                    <button class="btn-danger" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    <button class="btn-danger" onclick="logoutUser()"><i class="fas fa-sign-out-alt"></i> Logout</button>
                 </div>
             </div>`;
-    }).catch(err => {
-        container.innerHTML = `<div class="page-container"><p>Error loading profile: ${err.message}</p></div>`;
     });
 }
-window.renderProfilePage = renderProfilePage;
 
-async function updateProfileName() {
+window.saveNameProfile = async function() {
     const input = document.getElementById('profileNameInput');
     if (!input) return;
     const name = input.value.trim();
+    const statusDiv = document.getElementById('nameStatus');
     if (!name) {
-        document.getElementById('nameStatus').innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;">Please enter a name.</div>`;
+        statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your name.</div>`;
         return;
     }
-    
-    const user = window.currentUser;
-    if (!user) return;
-    
     try {
-        await window.saveUserProfile(user.username, {
-            name: name,
-            department: 'Medical Electronics',
-            lastLogin: new Date().toISOString(),
-            online: true
-        });
-        document.getElementById('nameStatus').innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;">✅ Name updated successfully!</div>`;
+        await update(ref(db, `users/${window.currentUsername}`), { displayName: name });
         document.getElementById('userNameDisplay').textContent = name;
-        window.showToast('Name updated!', 'success');
+        statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Name updated!</div>`;
+        setTimeout(() => statusDiv.innerHTML = '', 3000);
+        showToast('Name updated successfully!', 'success');
     } catch (error) {
-        document.getElementById('nameStatus').innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;">Error: ${error.message}</div>`;
+        showToast('Failed to update name', 'error');
     }
-}
-window.updateProfileName = updateProfileName;
+};
 
-async function handleLogout() {
-    await window.logoutUser();
-    location.reload();
-}
-window.handleLogout = handleLogout;
+window.saveEmailProfile = async function() {
+    const input = document.getElementById('profileEmailInput');
+    if (!input) return;
+    const email = input.value.trim();
+    const statusDiv = document.getElementById('emailStatus');
+    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Invalid email.</div>`;
+        return;
+    }
+    try {
+        await update(ref(db, `users/${window.currentUsername}`), { email });
+        statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Email saved!</div>`;
+        setTimeout(() => statusDiv.innerHTML = '', 3000);
+        showToast('Email saved successfully!', 'success');
+    } catch (error) {
+        showToast('Failed to save email', 'error');
+    }
+};
 
-// ============================================================
-// UPLOAD PAGE
-// ============================================================
+// =============================================================
+//  RENDER: MONITORING
+// =============================================================
+function renderMonitoringPage(container) {
+    // Fetch users from Firebase
+    get(child(ref(db), 'users')).then(snapshot => {
+        const users = snapshot.exists() ? snapshot.val() : {};
+        const userArray = Object.entries(users).map(([key, value]) => ({ username: key, ...value }));
+        
+        const onlineCount = userArray.filter(u => u.online).length;
+        const totalUsers = userArray.length;
+        
+        let html = `<div class="page-container">
+            <div class="page-header"><h2><i class="fas fa-chart-line" style="color:#0a4b78;"></i> Monitoring Dashboard</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
+            <div class="stats-grid">
+                <div class="stats-card"><div class="stat-number">${totalUsers}</div><div class="stat-label">Total Users</div></div>
+                <div class="stats-card"><div class="stat-number">${onlineCount}</div><div class="stat-label">Online Now</div></div>
+                <div class="stats-card"><div class="stat-number">${window.appData.approvedFiles.length}</div><div class="stat-label">Total Files</div></div>
+                <div class="stats-card"><div class="stat-number">${window.appData.pendingUploads?.length || 0}</div><div class="stat-label">Pending Requests</div></div>
+            </div>
+            <div style="margin-top:20px;">
+                <h4 style="color:#0a2b48; margin-bottom:12px;"><i class="fas fa-users"></i> Online Users</h4>
+                <div style="max-height:400px; overflow-y:auto;">`;
+        
+        if (userArray.length === 0) {
+            html += '<p style="color:#1f5175; text-align:center; padding:20px;">No users found</p>';
+        } else {
+            userArray.forEach(user => {
+                const statusIcon = user.online ? '🟢' : '⚪';
+                const statusText = user.online ? 'Online' : 'Offline';
+                html += `<div class="monitoring-item">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div><strong>${user.username}</strong> <span style="font-size:0.75rem; color:#1f5175;">${user.role || 'N/A'}</span>
+                        ${user.displayName ? `<span style="font-size:0.7rem; color:#075e54;"><i class="fas fa-user" style="color:#0a4b78;"></i> ${user.displayName}</span>` : ''}</div>
+                        <span style="font-size:0.75rem; color:${user.online ? '#28a745' : '#6c757d'};">${statusIcon} ${statusText}</span>
+                    </div>
+                </div>`;
+            });
+        }
+        
+        html += `</div></div></div>`;
+        container.innerHTML = html;
+    }).catch(error => {
+        console.error('Error loading users:', error);
+        container.innerHTML = `<div class="page-container"><p style="color:#dc3545;">Error loading monitoring data</p></div>`;
+    });
+}
+
+// =============================================================
+//  RENDER: QUESTION PAPERS
+// =============================================================
+function renderQuestionPapers(container) {
+    const cats = ['cat1', 'cat2', 'cat3'];
+    const catNames = { cat1: 'CAT-1', cat2: 'CAT-2', cat3: 'CAT-3 (Optional)' };
+    
+    let html = `<div class="page-container">
+        <div class="page-header"><h2><i class="fas fa-file-pdf" style="color:#0a4b78;"></i> Question Papers</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>`;
+    
+    // Get files from approved files
+    const qpFiles = window.appData.approvedFiles.filter(f => f.category === 'Question Papers');
+    const subjectMap = {};
+    qpFiles.forEach(f => {
+        if (!subjectMap[f.subject]) subjectMap[f.subject] = [];
+        subjectMap[f.subject].push(f);
+    });
+    
+    const subjects = Object.keys(subjectMap);
+    
+    if (subjects.length === 0) {
+        html += `<p style="color:#1f5175; text-align:center; padding:40px;">No question papers available</p>`;
+    } else {
+        subjects.forEach(subject => {
+            const files = subjectMap[subject] || [];
+            html += `<div style="margin:16px 0; background:rgba(255,255,255,0.2); border-radius:24px; padding:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                    <h3 style="color:#0a2b48;">${subject}</h3>
+                    <span class="file-count">${files.length} files</span>
+                </div>
+                <div class="file-list">`;
+            
+            files.forEach((file, idx) => {
+                html += `<div class="file-item">
+                    <div class="file-info">
+                        <i class="fas ${window.getFileIcon(file.file_name)}" style="color:${window.getFileColor(file.file_name)};"></i>
+                        <div>
+                            <div style="font-weight:500;">${file.file_name}</div>
+                            <div style="font-size:0.75rem; color:#1f5175;">${window.formatFileSize(file.file_size || 0)} · ${window.formatDateShort(file.uploaded_at)}</div>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn-preview" onclick="previewFile('${file.file_url}','${file.file_name}','application/pdf')"><i class="fas fa-eye"></i> Preview</button>
+                        <button class="btn-download" onclick="downloadFile('${file.file_url}','${file.file_name}')"><i class="fas fa-download"></i></button>
+                        ${window.isAdmin() ? `<button class="btn-delete" onclick="deleteFile('${file.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                    </div>
+                </div>`;
+            });
+            
+            html += `</div></div>`;
+        });
+    }
+    
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+// =============================================================
+//  RENDER: SUBJECT MATERIALS
+// =============================================================
+function renderSubjectMaterials(container) {
+    let html = `<div class="page-container">
+        <div class="page-header"><h2><i class="fas fa-book-open" style="color:#0a4b78;"></i> Subject Materials</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>`;
+    
+    const smFiles = window.appData.approvedFiles.filter(f => f.category === 'Subject Materials');
+    const subjectMap = {};
+    smFiles.forEach(f => {
+        if (!subjectMap[f.subject]) subjectMap[f.subject] = [];
+        subjectMap[f.subject].push(f);
+    });
+    
+    const subjects = Object.keys(subjectMap);
+    
+    if (subjects.length === 0) {
+        html += `<p style="color:#1f5175; text-align:center; padding:40px;">No subject materials available</p>`;
+    } else {
+        subjects.forEach(subject => {
+            const files = subjectMap[subject] || [];
+            html += `<div style="margin:16px 0; background:rgba(255,255,255,0.2); border-radius:24px; padding:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                    <h3 style="color:#0a2b48;">${subject}</h3>
+                    <span class="file-count">${files.length} files</span>
+                </div>
+                <div class="file-list">`;
+            
+            files.forEach((file, idx) => {
+                html += `<div class="file-item">
+                    <div class="file-info">
+                        <i class="fas ${window.getFileIcon(file.file_name)}" style="color:${window.getFileColor(file.file_name)};"></i>
+                        <div>
+                            <div style="font-weight:500;">${file.file_name}</div>
+                            <div style="font-size:0.75rem; color:#1f5175;">${window.formatFileSize(file.file_size || 0)} · ${window.formatDateShort(file.uploaded_at)}</div>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn-preview" onclick="previewFile('${file.file_url}','${file.file_name}','application/pdf')"><i class="fas fa-eye"></i> Preview</button>
+                        <button class="btn-download" onclick="downloadFile('${file.file_url}','${file.file_name}')"><i class="fas fa-download"></i></button>
+                        ${window.isAdmin() ? `<button class="btn-delete" onclick="deleteFile('${file.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                    </div>
+                </div>`;
+            });
+            
+            html += `</div></div>`;
+        });
+    }
+    
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+// =============================================================
+//  RENDER: UPLOAD
+// =============================================================
+window.uploadCategory = 'questionPapers';
+
 function renderUploadPage(container) {
-    const isAdmin = window.currentRole === 'admin';
-    const isFaculty = window.currentRole === 'faculty';
-    const isStudent = window.currentRole === 'student';
+    const cats = ['cat1', 'cat2', 'cat3'];
+    const catNames = { cat1: 'CAT-1', cat2: 'CAT-2', cat3: 'CAT-3 (Optional)' };
     
-    let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-cloud-upload-alt" style="color:#0a4b78;"></i> Upload Files</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>`;
+    // Get subjects from Firebase
+    let subjects = window.appData.questionPapers.cat1.subjects || ['BME101', 'BME102', 'BME103'];
     
-    // Show role-based info
-    if (isStudent || isFaculty) {
-        html += `<div style="background:rgba(255,193,7,0.1); border:1px solid #ffc107; border-radius:12px; padding:16px; margin-bottom:16px;">
-            <i class="fas fa-info-circle" style="color:#ffc107;"></i> 
-            <strong>${isStudent ? 'Student' : 'Faculty'} Mode:</strong> Your upload will be sent for admin approval.
-        </div>`;
-    } else if (isAdmin) {
-        html += `<div style="background:rgba(40,167,69,0.1); border:1px solid #28a745; border-radius:12px; padding:16px; margin-bottom:16px;">
-            <i class="fas fa-check-circle" style="color:#28a745;"></i> 
-            <strong>Admin Mode:</strong> Files will be uploaded directly.
-        </div>`;
-    }
-    
-    html += `
+    let html = `<div class="page-container">
+        <div class="page-header"><h2><i class="fas fa-cloud-upload-alt" style="color:#0a4b78;"></i> Upload Files</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
         <div style="display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
-            <button class="${uploadCategory === 'questionPapers' ? 'btn-primary' : 'btn-outline'}" onclick="setUploadCategory('questionPapers')"><i class="fas fa-file-pdf"></i> Question Papers</button>
-            <button class="${uploadCategory === 'subjectMaterials' ? 'btn-primary' : 'btn-outline'}" onclick="setUploadCategory('subjectMaterials')"><i class="fas fa-book-open"></i> Subject Materials</button>
+            <button class="${window.uploadCategory === 'questionPapers' ? 'btn-primary' : 'btn-outline'}" onclick="setUploadCategory('questionPapers')"><i class="fas fa-file-pdf"></i> Question Papers</button>
+            <button class="${window.uploadCategory === 'subjectMaterials' ? 'btn-primary' : 'btn-outline'}" onclick="setUploadCategory('subjectMaterials')"><i class="fas fa-book-open"></i> Subject Materials</button>
         </div>
         <div id="uploadOptions">`;
     
-    if (uploadCategory === 'questionPapers') {
-        html += `<div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Category:</label>
+    if (window.uploadCategory === 'questionPapers') {
+        html += `<div style="margin:16px 0;">
+            <label style="font-weight:500; display:block; margin-bottom:8px;">Select Category:</label>
             <select class="subject-select" id="uploadCatSelect" onchange="updateUploadCat()">
-                <option value="cat1">CAT-1</option>
-                <option value="cat2">CAT-2</option>
-                <option value="cat3">CAT-3 (Optional)</option>
-            </select></div>
-            <div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Subject:</label>
+                ${cats.map(c => `<option value="${c}">${catNames[c]}</option>`).join('')}
+            </select>
+        </div>
+        <div style="margin:16px 0;">
+            <label style="font-weight:500; display:block; margin-bottom:8px;">Select Subject:</label>
             <select class="subject-select" id="uploadSubjectSelect">
-                ${['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'].map(s => `<option value="${s}">${s}</option>`).join('')}
-            </select></div>`;
+                ${subjects.map(s => `<option value="${s}">${s}</option>`).join('')}
+            </select>
+        </div>
+        <p style="color:#1f5175; font-size:0.85rem;"><i class="fas fa-info-circle"></i> Images & PDFs accepted.</p>`;
     } else {
-        html += `<div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Subject:</label>
+        const smSubjects = window.appData.subjectMaterials.subjects || ['BME101', 'BME102', 'BME103'];
+        html += `<div style="margin:16px 0;">
+            <label style="font-weight:500; display:block; margin-bottom:8px;">Select Subject:</label>
             <select class="subject-select" id="uploadSMSubjectSelect">
-                ${['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'].map(s => `<option value="${s}">${s}</option>`).join('')}
-            </select></div>`;
+                ${smSubjects.map(s => `<option value="${s}">${s}</option>`).join('')}
+            </select>
+        </div>
+        <p style="color:#1f5175; font-size:0.85rem;"><i class="fas fa-info-circle"></i> PDF and documents accepted.</p>`;
     }
     
     html += `</div>
         <div class="file-upload-area" id="dropZone">
             <i class="fas fa-cloud-upload-alt" style="font-size:3rem; color:#0a4b78;"></i>
             <p style="margin:12px 0; color:#1f5175;">📁 Drag & drop or click to browse</p>
-            <p style="font-size:0.8rem; color:#0a4b78;">PDF files only</p>
-            <input type="file" id="fileInput" accept=".pdf" multiple style="display:none;" />
+            <p style="font-size:0.8rem; color:#0a4b78; margin-bottom:8px;">
+                <i class="fas fa-shield-alt"></i> 
+                ${window.isAdmin() ? 'Admin: Direct Upload' : 'Your upload will be sent for admin approval'}
+            </p>
+            <input type="file" id="fileInput" multiple style="display:none;" accept=".pdf,.jpg,.jpeg,.png,.gif" />
             <button class="btn-primary" onclick="document.getElementById('fileInput').click()"><i class="fas fa-folder-open"></i> Browse Files</button>
         </div>
         <div id="uploadStatus" style="margin-top:12px;"></div>
@@ -1407,51 +1777,49 @@ function renderUploadPage(container) {
         fileInput.addEventListener('change', handleFileUpload);
     }
     
-    // Setup drop zone
+    // Setup drag and drop
     const dz = document.getElementById('dropZone');
     if (dz) {
         dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
         dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-        dz.addEventListener('drop', e => { 
-            e.preventDefault(); 
-            dz.classList.remove('dragover'); 
+        dz.addEventListener('drop', e => {
+            e.preventDefault();
+            dz.classList.remove('dragover');
             if (e.dataTransfer.files.length > 0) {
-                const input = document.getElementById('fileInput');
-                if (input) {
-                    input.files = e.dataTransfer.files;
-                    input.dispatchEvent(new Event('change'));
+                const fileInput = document.getElementById('fileInput');
+                if (fileInput) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileInput.dispatchEvent(new Event('change'));
                 }
             }
         });
     }
 }
-window.renderUploadPage = renderUploadPage;
 
-function setUploadCategory(category) {
-    uploadCategory = category;
+window.setUploadCategory = function(category) {
+    window.uploadCategory = category;
     renderUploadPage(document.getElementById('pageContainer'));
-}
-window.setUploadCategory = setUploadCategory;
+};
 
-function updateUploadCat() {
+window.updateUploadCat = function() {
     const cat = document.getElementById('uploadCatSelect');
     const sel = document.getElementById('uploadSubjectSelect');
     if (!cat || !sel) return;
-    // Update subjects based on category
-    // For now, keep static
-}
-window.updateUploadCat = updateUploadCat;
+    const data = window.appData.questionPapers[cat.value];
+    if (data && data.subjects) {
+        sel.innerHTML = data.subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+};
 
-// ============================================================
-// FILE UPLOAD HANDLER
-// ============================================================
-async function handleFileUpload(event) {
+// =============================================================
+//  HANDLE FILE UPLOAD
+// =============================================================
+function handleFileUpload(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
     
-    // Get subject
     let subject = '';
-    if (uploadCategory === 'questionPapers') {
+    if (window.uploadCategory === 'questionPapers') {
         const subjectSelect = document.getElementById('uploadSubjectSelect');
         if (subjectSelect) subject = subjectSelect.value;
     } else {
@@ -1460,701 +1828,643 @@ async function handleFileUpload(event) {
     }
     
     if (!subject) {
-        window.showToast('Please select a subject first.', 'warning');
+        const statusDiv = document.getElementById('uploadStatus');
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please select a subject.</div>`;
         return;
     }
     
-    const file = files[0]; // Only handle one file at a time for now
-    const user = window.currentUser;
-    
-    if (!user) {
-        window.showToast('Please login first.', 'error');
-        return;
-    }
-    
-    // Check if admin
-    const isAdmin = user.role === 'admin';
-    
-    // Show progress
-    const progressDiv = document.getElementById('uploadProgress');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    const fileNameDisplay = document.getElementById('uploadFileName');
-    const statusDiv = document.getElementById('uploadStatus');
-    
-    if (progressDiv) progressDiv.style.display = 'block';
-    if (progressBar) progressBar.style.width = '0%';
-    if (progressText) progressText.textContent = '0%';
-    if (fileNameDisplay) fileNameDisplay.textContent = `Processing ${file.name}...`;
-    
-    try {
-        if (isAdmin) {
-            // Admin uploads directly
-            const result = await window.uploadFileToSupabase(file, subject, user.username);
-            if (result.success) {
-                window.showToast(`✅ ${file.name} uploaded successfully!`, 'success');
-                if (statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> ${file.name} uploaded successfully!</div>`;
-            } else {
-                throw new Error(result.error);
-            }
-        } else {
-            // Non-admin submits approval request
-            // For now, just show a toast since we need to handle file data
-            window.showToast(`📤 ${file.name} submitted for approval.`, 'info');
-            if (statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-clock"></i> ${file.name} submitted for admin approval.</div>`;
+    // Validate files
+    const validFiles = [];
+    for (let f of files) {
+        if (f.type === 'application/pdf' || f.type.startsWith('image/')) {
+            validFiles.push(f);
         }
-    } catch (error) {
-        console.error('Upload error:', error);
-        window.showToast('Upload failed: ' + error.message, 'error');
-        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> ${error.message}</div>`;
-    } finally {
-        setTimeout(() => {
-            if (progressDiv) progressDiv.style.display = 'none';
-        }, 2000);
+    }
+    
+    if (validFiles.length === 0) {
+        const statusDiv = document.getElementById('uploadStatus');
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> Only PDF and images allowed.</div>`;
+        return;
+    }
+    
+    // Check role - Admin uploads directly, others request approval
+    if (window.isAdmin()) {
+        uploadFilesDirect(validFiles, subject);
+    } else {
+        requestUploadApproval(validFiles, subject);
     }
     
     event.target.value = '';
 }
-window.handleFileUpload = handleFileUpload;
 
-// ============================================================
-// QUESTION PAPERS PAGE
-// ============================================================
-function renderQuestionPapers(container) {
-    container.innerHTML = `
-        <div class="page-container">
-            <div class="page-header">
-                <h2><i class="fas fa-file-pdf" style="color:#0a4b78;"></i> Question Papers</h2>
-                <button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button>
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-top:16px;">
-                ${['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'].map(subject => `
-                    <div class="category-card" onclick="viewQuestionPapers('${subject}')">
-                        <i class="fas fa-file-pdf" style="font-size:2rem; color:#0a4b78;"></i>
-                        <h4>${subject}</h4>
-                        <div class="file-count">Loading...</div>
-                    </div>
-                `).join('')}
-            </div>
-            <div id="qpFileList"></div>
-        </div>`;
-}
-window.renderQuestionPapers = renderQuestionPapers;
-
-function viewQuestionPapers(subject) {
-    const container = document.getElementById('pageContainer');
-    container.innerHTML = `
-        <div class="page-container">
-            <div class="page-header">
-                <h2><i class="fas fa-file-pdf" style="color:#0a4b78;"></i> ${subject}</h2>
-                <button class="close-btn" onclick="showPage('questionPapers')"><i class="fas fa-arrow-left"></i> Back</button>
-            </div>
-            <div id="qpFiles" style="margin-top:16px;">
-                <div style="text-align:center; padding:40px; color:#1f5175;">
-                    <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-                    <p>Loading files...</p>
-                </div>
-            </div>
-        </div>`;
+// =============================================================
+//  DIRECT UPLOAD (ADMIN ONLY)
+// =============================================================
+async function uploadFilesDirect(files, subject) {
+    const statusDiv = document.getElementById('uploadStatus');
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const fileNameDisplay = document.getElementById('uploadFileName');
     
-    // Fetch files from Supabase
-    window.fetchFilesFromSupabase().then(result => {
-        const filesDiv = document.getElementById('qpFiles');
-        if (!filesDiv) return;
-        
-        if (!result.success) {
-            filesDiv.innerHTML = `<p style="color:#dc3545;">Error loading files: ${result.error}</p>`;
-            return;
-        }
-        
-        const files = result.data.filter(f => f.subject === subject);
-        
-        if (files.length === 0) {
-            filesDiv.innerHTML = `<p style="color:#1f5175; text-align:center; padding:40px;">📭 No files found for ${subject}</p>`;
-            return;
-        }
-        
-        let html = `<div class="file-list">`;
-        files.forEach((file, idx) => {
-            html += `
-                <div class="file-item">
-                    <div class="file-info">
-                        <i class="fas fa-file-pdf" style="color:#c0392b;"></i>
-                        <div>
-                            <div style="font-weight:500;">${file.file_name}</div>
-                            <div style="font-size:0.75rem; color:#1f5175;">${formatDateShort(file.uploaded_at)} · ${file.uploaded_by}</div>
-                        </div>
-                    </div>
-                    <div class="file-actions">
-                        <button class="btn-preview" onclick="window.open('${file.file_url}', '_blank')"><i class="fas fa-eye"></i> View</button>
-                        <button class="btn-download" onclick="window.open('${file.file_url}', '_blank')"><i class="fas fa-download"></i></button>
-                    </div>
-                </div>
-            `;
-        });
-        html += `</div>`;
-        filesDiv.innerHTML = html;
-    }).catch(err => {
-        const filesDiv = document.getElementById('qpFiles');
-        if (filesDiv) filesDiv.innerHTML = `<p style="color:#dc3545;">Error: ${err.message}</p>`;
-    });
-}
-window.viewQuestionPapers = viewQuestionPapers;
-
-// ============================================================
-// SUBJECT MATERIALS PAGE
-// ============================================================
-function renderSubjectMaterials(container) {
-    container.innerHTML = `
-        <div class="page-container">
-            <div class="page-header">
-                <h2><i class="fas fa-book-open" style="color:#0a4b78;"></i> Subject Materials</h2>
-                <button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button>
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-top:16px;">
-                ${['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'].map(subject => `
-                    <div class="category-card" onclick="viewSubjectMaterials('${subject}')">
-                        <i class="fas fa-book" style="font-size:2rem; color:#0a4b78;"></i>
-                        <h4>${subject}</h4>
-                        <div class="file-count">Loading...</div>
-                    </div>
-                `).join('')}
-            </div>
-            <div id="smFileList"></div>
-        </div>`;
-}
-window.renderSubjectMaterials = renderSubjectMaterials;
-
-function viewSubjectMaterials(subject) {
-    const container = document.getElementById('pageContainer');
-    container.innerHTML = `
-        <div class="page-container">
-            <div class="page-header">
-                <h2><i class="fas fa-book" style="color:#0a4b78;"></i> ${subject}</h2>
-                <button class="close-btn" onclick="showPage('subjectMaterials')"><i class="fas fa-arrow-left"></i> Back</button>
-            </div>
-            <div id="smFiles" style="margin-top:16px;">
-                <div style="text-align:center; padding:40px; color:#1f5175;">
-                    <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-                    <p>Loading files...</p>
-                </div>
-            </div>
-        </div>`;
+    if (!window.supabaseClient) {
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Supabase not connected.</div>`;
+        return;
+    }
     
-    window.fetchFilesFromSupabase().then(result => {
-        const filesDiv = document.getElementById('smFiles');
-        if (!filesDiv) return;
-        
-        if (!result.success) {
-            filesDiv.innerHTML = `<p style="color:#dc3545;">Error loading files: ${result.error}</p>`;
-            return;
+    if (progressDiv) progressDiv.style.display = 'block';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressText) progressText.textContent = '0%';
+    if (fileNameDisplay) fileNameDisplay.textContent = `Uploading ${files.length} file(s)...`;
+    
+    let completed = 0;
+    const total = files.length;
+    let successCount = 0;
+    const category = window.uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials';
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+            if (fileNameDisplay) fileNameDisplay.textContent = `Uploading ${file.name} (${i+1}/${total})...`;
+            
+            const filePath = `uploads/${Date.now()}_${file.name}`;
+            const { data: uploadData, error: uploadError } = await window.supabaseClient
+                .storage
+                .from('pdf-files')
+                .upload(filePath, file, { cacheControl: '3600', upsert: false });
+            
+            if (uploadError) throw new Error('Storage upload failed: ' + uploadError.message);
+            
+            const { data: urlData } = window.supabaseClient
+                .storage
+                .from('pdf-files')
+                .getPublicUrl(filePath);
+            
+            const fileId = window.generateId();
+            const fileData = {
+                id: fileId,
+                file_name: file.name,
+                subject: subject,
+                category: category,
+                uploaded_by: window.currentUsername || 'admin',
+                uploaded_at: new Date().toISOString(),
+                file_url: urlData.publicUrl,
+                file_size: file.size,
+                approved: true,
+                approved_by: window.currentUsername || 'admin',
+                approved_at: new Date().toISOString()
+            };
+            
+            // Insert into Supabase
+            const { error: dbError } = await window.supabaseClient
+                .from('files')
+                .insert([fileData]);
+            
+            if (dbError) throw new Error('DB insert failed: ' + dbError.message);
+            
+            // Add to local approved files
+            window.appData.approvedFiles.push(fileData);
+            
+            // Send notification
+            await set(ref(db, `notifications/${fileId}`), {
+                type: 'file_uploaded',
+                fileName: file.name,
+                subject: subject,
+                uploadedBy: window.currentUsername,
+                timestamp: Date.now()
+            });
+            
+            successCount++;
+            console.log('✅ Uploaded:', file.name);
+            
+        } catch (error) {
+            console.error('❌ Upload failed:', file.name, error.message);
+            if (statusDiv) {
+                statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error: ${error.message}</div>`;
+            }
         }
         
-        const files = result.data.filter(f => f.subject === subject);
+        completed++;
+        const progress = Math.round((completed / total) * 100);
+        if (progressBar) progressBar.style.width = progress + '%';
+        if (progressText) progressText.textContent = progress + '%';
+    }
+    
+    if (progressDiv) progressDiv.style.display = 'none';
+    
+    if (successCount === total) {
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> ✅ All ${successCount} files uploaded successfully!</div>`;
+        showToast(`✅ ${successCount} files uploaded successfully!`, 'success');
+    } else if (successCount > 0) {
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-exclamation-triangle"></i> ${successCount}/${total} files uploaded. Some failed.</div>`;
+    } else {
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> All uploads failed. Check console.</div>`;
+    }
+    
+    updateCounts();
+    refreshCurrentPage();
+}
+
+// =============================================================
+//  REQUEST UPLOAD APPROVAL (STUDENT/FACULTY)
+// =============================================================
+async function requestUploadApproval(files, subject) {
+    const statusDiv = document.getElementById('uploadStatus');
+    
+    try {
+        const requestId = window.generateId();
+        const fileData = [];
         
-        if (files.length === 0) {
-            filesDiv.innerHTML = `<p style="color:#1f5175; text-align:center; padding:40px;">📭 No materials found for ${subject}</p>`;
-            return;
+        for (let file of files) {
+            // Read file as data URL for preview
+            const reader = new FileReader();
+            const dataUrl = await new Promise((resolve) => {
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
+            
+            fileData.push({
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                data: dataUrl
+            });
         }
         
-        let html = `<div class="file-list">`;
-        files.forEach((file) => {
-            html += `
-                <div class="file-item">
-                    <div class="file-info">
-                        <i class="fas fa-file-pdf" style="color:#c0392b;"></i>
-                        <div>
-                            <div style="font-weight:500;">${file.file_name}</div>
-                            <div style="font-size:0.75rem; color:#1f5175;">${formatDateShort(file.uploaded_at)} · ${file.uploaded_by}</div>
-                        </div>
-                    </div>
-                    <div class="file-actions">
-                        <button class="btn-preview" onclick="window.open('${file.file_url}', '_blank')"><i class="fas fa-eye"></i> View</button>
-                        <button class="btn-download" onclick="window.open('${file.file_url}', '_blank')"><i class="fas fa-download"></i></button>
+        const requestData = {
+            id: requestId,
+            category: window.uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials',
+            subject: subject,
+            files: fileData,
+            requestedBy: window.currentUsername || 'anonymous',
+            requestedAt: Date.now(),
+            status: 'pending',
+            role: window.currentRole || 'student'
+        };
+        
+        // Save to Firebase pendingUploads
+        await set(ref(db, `pendingUploads/${requestId}`), requestData);
+        
+        // Send notification to admin
+        await set(ref(db, `notifications/${requestId}`), {
+            type: 'upload_request',
+            requestedBy: window.currentUsername,
+            subject: subject,
+            timestamp: Date.now()
+        });
+        
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-clock"></i> ✅ Upload request submitted for admin approval!</div>`;
+        showToast('📤 Upload request sent to admin!', 'success');
+        
+    } catch (error) {
+        console.error('Request error:', error);
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Failed to submit request: ${error.message}</div>`;
+        showToast('Failed to submit request', 'error');
+    }
+}
+
+// =============================================================
+//  RENDER: APPROVALS (ADMIN ONLY)
+// =============================================================
+function renderApprovalsPage(container) {
+    const pending = window.appData.pendingUploads || [];
+    const pendingRequests = pending.filter(p => p.status === 'pending');
+    
+    let html = `<div class="page-container">
+        <div class="page-header"><h2><i class="fas fa-clipboard-list" style="color:#0a4b78;"></i> Approval Requests</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>`;
+    
+    if (pendingRequests.length === 0) {
+        html += `<p style="color:#1f5175; text-align:center; padding:40px;">No pending approval requests</p>`;
+    } else {
+        pendingRequests.forEach(req => {
+            const totalSize = req.files.reduce((s, f) => s + (f.size || 0), 0);
+            const fileNames = req.files.map(f => f.name).join(', ');
+            
+            html += `<div class="approval-request">
+                <div class="request-info">
+                    <div class="request-title"><i class="fas fa-file-alt" style="color:#0a4b78;"></i> ${req.category} — ${req.subject}</div>
+                    <div class="request-meta">
+                        <i class="fas fa-user" style="color:#0a4b78;"></i> ${req.requestedBy}
+                        <br><i class="fas fa-clock" style="color:#0a4b78;"></i> ${window.formatDateTime(req.requestedAt)}
                     </div>
                 </div>
-            `;
+                <div class="request-details">
+                    <div><i class="fas fa-file"></i> <strong>Files:</strong> ${fileNames}</div>
+                    <div style="margin-top:4px;"><i class="fas fa-weight-hanging"></i> <strong>Total Size:</strong> ${window.formatFileSize(totalSize)}</div>
+                    <div style="margin-top:4px;"><span class="pending-badge">⏳ Pending</span></div>
+                </div>
+                <div class="request-actions">
+                    <button class="btn-preview-request" onclick="previewRequestFile('${req.id}', 0)"><i class="fas fa-eye"></i> Preview</button>
+                    <button class="btn-approve" onclick="approveRequest('${req.id}')"><i class="fas fa-check"></i> Approve</button>
+                    <button class="btn-reject" onclick="rejectRequest('${req.id}')"><i class="fas fa-times"></i> Reject</button>
+                </div>
+            </div>`;
         });
-        html += `</div>`;
-        filesDiv.innerHTML = html;
-    }).catch(err => {
-        const filesDiv = document.getElementById('smFiles');
-        if (filesDiv) filesDiv.innerHTML = `<p style="color:#dc3545;">Error: ${err.message}</p>`;
-    });
+    }
+    
+    html += `</div>`;
+    container.innerHTML = html;
 }
-window.viewSubjectMaterials = viewSubjectMaterials;
 
-// ============================================================
-// SEARCH PAGE
-// ============================================================
+window.previewRequestFile = function(requestId, fileIndex) {
+    const requests = window.appData.pendingUploads || [];
+    const req = requests.find(r => r.id === requestId);
+    if (!req || !req.files || !req.files[fileIndex]) {
+        showToast('File not found', 'error');
+        return;
+    }
+    const file = req.files[fileIndex];
+    window.showFilePreview(file.data, file.name, file.type);
+};
+
+window.approveRequest = async function(requestId) {
+    if (!confirm('Approve this upload request?')) return;
+    
+    try {
+        showLoading('Approving...');
+        const requests = window.appData.pendingUploads || [];
+        const req = requests.find(r => r.id === requestId);
+        if (!req) { showToast('Request not found', 'error'); hideLoading(); return; }
+        
+        // Update status in Firebase
+        await update(ref(db, `pendingUploads/${requestId}`), { status: 'approved' });
+        
+        // Upload files to Supabase Storage
+        const category = req.category;
+        const subject = req.subject;
+        const uploadedBy = req.requestedBy;
+        
+        for (const fileData of req.files) {
+            try {
+                // Convert data URL to blob
+                const response = await fetch(fileData.data);
+                const blob = await response.blob();
+                const file = new File([blob], fileData.name, { type: fileData.type });
+                
+                const filePath = `uploads/${Date.now()}_${fileData.name}`;
+                const { data: uploadData, error: uploadError } = await window.supabaseClient
+                    .storage
+                    .from('pdf-files')
+                    .upload(filePath, file, { cacheControl: '3600', upsert: false });
+                
+                if (uploadError) throw new Error('Storage upload failed: ' + uploadError.message);
+                
+                const { data: urlData } = window.supabaseClient
+                    .storage
+                    .from('pdf-files')
+                    .getPublicUrl(filePath);
+                
+                const fileId = window.generateId();
+                const dbData = {
+                    id: fileId,
+                    file_name: fileData.name,
+                    subject: subject,
+                    category: category,
+                    uploaded_by: uploadedBy,
+                    uploaded_at: new Date().toISOString(),
+                    file_url: urlData.publicUrl,
+                    file_size: fileData.size || 0,
+                    approved: true,
+                    approved_by: window.currentUsername || 'admin',
+                    approved_at: new Date().toISOString()
+                };
+                
+                const { error: dbError } = await window.supabaseClient
+                    .from('files')
+                    .insert([dbData]);
+                
+                if (dbError) throw new Error('DB insert failed: ' + dbError.message);
+                
+                // Add to approved files
+                window.appData.approvedFiles.push(dbData);
+                
+            } catch (error) {
+                console.error('Error uploading approved file:', error);
+                showToast('Error uploading: ' + error.message, 'error');
+            }
+        }
+        
+        // Send notification
+        await set(ref(db, `notifications/${requestId}`), {
+            type: 'upload_approved',
+            requestedBy: req.requestedBy,
+            subject: req.subject,
+            timestamp: Date.now()
+        });
+        
+        // Remove from pending list locally
+        window.appData.pendingUploads = window.appData.pendingUploads.filter(r => r.id !== requestId);
+        
+        hideLoading();
+        showToast('✅ Request approved and files uploaded!', 'success');
+        updateCounts();
+        updatePendingBadge();
+        refreshCurrentPage();
+        
+    } catch (error) {
+        console.error('Approval error:', error);
+        hideLoading();
+        showToast('Error approving: ' + error.message, 'error');
+    }
+};
+
+window.rejectRequest = async function(requestId) {
+    if (!confirm('Reject this upload request?')) return;
+    
+    try {
+        await update(ref(db, `pendingUploads/${requestId}`), { status: 'rejected' });
+        
+        // Send notification
+        await set(ref(db, `notifications/${requestId}`), {
+            type: 'upload_rejected',
+            timestamp: Date.now()
+        });
+        
+        window.appData.pendingUploads = window.appData.pendingUploads.filter(r => r.id !== requestId);
+        
+        showToast('❌ Request rejected', 'warning');
+        updatePendingBadge();
+        refreshCurrentPage();
+        
+    } catch (error) {
+        console.error('Reject error:', error);
+        showToast('Error rejecting request', 'error');
+    }
+};
+
+// =============================================================
+//  RENDER: MY UPLOADS
+// =============================================================
+function renderMyUploads(container) {
+    const username = window.currentUsername;
+    const userFiles = window.appData.approvedFiles.filter(f => f.uploaded_by === username);
+    
+    let html = `<div class="page-container">
+        <div class="page-header"><h2><i class="fas fa-history" style="color:#0a4b78;"></i> My Uploads</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>`;
+    
+    if (userFiles.length === 0) {
+        html += `<p style="color:#1f5175; text-align:center; padding:40px;">📭 No uploads found for ${username}</p>`;
+    } else {
+        html += `<div class="file-list">`;
+        userFiles.forEach((file, idx) => {
+            html += `<div class="file-item">
+                <div class="file-info">
+                    <i class="fas ${window.getFileIcon(file.file_name)}" style="color:${window.getFileColor(file.file_name)};"></i>
+                    <div>
+                        <div style="font-weight:500;">${file.file_name}</div>
+                        <div style="font-size:0.75rem; color:#1f5175;">📂 ${file.category} · ${file.subject} · ${window.formatDateShort(file.uploaded_at)}</div>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <button class="btn-preview" onclick="previewFile('${file.file_url}','${file.file_name}','application/pdf')"><i class="fas fa-eye"></i> Preview</button>
+                    <button class="btn-download" onclick="downloadFile('${file.file_url}','${file.file_name}')"><i class="fas fa-download"></i></button>
+                </div>
+            </div>`;
+        });
+        html += `</div><p style="margin-top:12px; font-size:0.8rem; color:#1f5175;">Total: ${userFiles.length} file(s)</p>`;
+    }
+    
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+// =============================================================
+//  RENDER: SEARCH
+// =============================================================
 function renderSearchPage(container) {
-    container.innerHTML = `
-        <div class="page-container">
-            <div class="page-header">
-                <h2><i class="fas fa-search" style="color:#0a4b78;"></i> Search Documents</h2>
-                <button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button>
-            </div>
-            <div style="display:flex; gap:12px; margin-bottom:20px;">
-                <input type="text" id="searchInput" class="login-input" placeholder="Search by filename or subject..." style="flex:1;" />
-                <button class="btn-primary" onclick="performSearch()"><i class="fas fa-search"></i> Search</button>
-            </div>
-            <div id="searchResults"></div>
-        </div>`;
+    container.innerHTML = `<div class="page-container">
+        <div class="page-header"><h2><i class="fas fa-search" style="color:#0a4b78;"></i> Search Documents</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
+        <div style="display:flex; gap:12px; margin-bottom:20px;">
+            <input type="text" id="searchInput" class="login-input" placeholder="Search by filename, subject, or uploader..." style="flex:1;" />
+            <button class="btn-primary" onclick="performSearch()"><i class="fas fa-search"></i> Search</button>
+        </div>
+        <div id="searchResults"></div>
+    </div>`;
 }
-window.renderSearchPage = renderSearchPage;
 
-function performSearch() {
-    const input = document.getElementById('searchInput');
+window.performSearch = function() {
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput) return;
+    const query = searchInput.value.toLowerCase().trim();
     const resultsDiv = document.getElementById('searchResults');
-    if (!input || !resultsDiv) return;
+    if (!resultsDiv) return;
     
-    const query = input.value.toLowerCase().trim();
     if (!query) {
         resultsDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:20px;">Enter a search term</p>';
         return;
     }
     
-    resultsDiv.innerHTML = `<div style="text-align:center; padding:40px; color:#1f5175;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><p>Searching...</p></div>`;
-    
-    window.fetchFilesFromSupabase().then(result => {
-        if (!result.success) {
-            resultsDiv.innerHTML = `<p style="color:#dc3545;">Error: ${result.error}</p>`;
-            return;
-        }
-        
-        const results = result.data.filter(f => 
-            f.file_name.toLowerCase().includes(query) || 
-            f.subject.toLowerCase().includes(query)
-        );
-        
-        if (results.length === 0) {
-            resultsDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:20px;">No results found</p>';
-            return;
-        }
-        
-        let html = `<div style="background:rgba(255,255,255,0.2); border-radius:24px; padding:16px;">
-            <h4 style="color:#0a2b48; margin-bottom:12px;">Found ${results.length} results</h4>`;
-        results.forEach((file) => {
-            html += `
-                <div class="file-item">
-                    <div class="file-info">
-                        <i class="fas fa-file-pdf" style="color:#c0392b;"></i>
-                        <div>
-                            <div style="font-weight:500;">${file.file_name}</div>
-                            <div style="font-size:0.75rem; color:#1f5175;">${file.subject} · ${file.uploaded_by}</div>
-                        </div>
-                    </div>
-                    <div class="file-actions">
-                        <button class="btn-preview" onclick="window.open('${file.file_url}', '_blank')"><i class="fas fa-eye"></i> View</button>
-                        <button class="btn-download" onclick="window.open('${file.file_url}', '_blank')"><i class="fas fa-download"></i></button>
-                    </div>
-                </div>
-            `;
-        });
-        html += `</div>`;
-        resultsDiv.innerHTML = html;
-    }).catch(err => {
-        resultsDiv.innerHTML = `<p style="color:#dc3545;">Error: ${err.message}</p>`;
+    const results = window.appData.approvedFiles.filter(file => {
+        return file.file_name.toLowerCase().includes(query) ||
+               file.subject.toLowerCase().includes(query) ||
+               (file.uploaded_by && file.uploaded_by.toLowerCase().includes(query));
     });
-}
-window.performSearch = performSearch;
-
-// ============================================================
-// MY UPLOADS PAGE
-// ============================================================
-function renderMyUploads(container) {
-    const user = window.currentUser;
-    if (!user) {
-        container.innerHTML = '<div class="page-container"><p>Please login first</p></div>';
+    
+    if (results.length === 0) {
+        resultsDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:20px;">No results found</p>';
         return;
     }
     
-    container.innerHTML = `
-        <div class="page-container">
-            <div class="page-header">
-                <h2><i class="fas fa-history" style="color:#0a4b78;"></i> My Uploads</h2>
-                <button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button>
-            </div>
-            <div id="myUploadsList">
-                <div style="text-align:center; padding:40px; color:#1f5175;">
-                    <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-                    <p>Loading your uploads...</p>
-                </div>
-            </div>
-        </div>`;
-    
-    window.fetchFilesFromSupabase().then(result => {
-        const listDiv = document.getElementById('myUploadsList');
-        if (!listDiv) return;
-        
-        if (!result.success) {
-            listDiv.innerHTML = `<p style="color:#dc3545;">Error: ${result.error}</p>`;
-            return;
-        }
-        
-        const uploads = result.data.filter(f => f.uploaded_by === user.username);
-        
-        if (uploads.length === 0) {
-            listDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:40px;">📭 No uploads found</p>';
-            return;
-        }
-        
-        let html = `<div class="file-list">`;
-        uploads.forEach((file) => {
-            html += `
-                <div class="file-item">
-                    <div class="file-info">
-                        <i class="fas fa-file-pdf" style="color:#c0392b;"></i>
-                        <div>
-                            <div style="font-weight:500;">${file.file_name}</div>
-                            <div style="font-size:0.75rem; color:#1f5175;">${file.subject} · ${formatDateShort(file.uploaded_at)}</div>
-                        </div>
-                    </div>
-                    <div class="file-actions">
-                        <button class="btn-preview" onclick="window.open('${file.file_url}', '_blank')"><i class="fas fa-eye"></i> View</button>
-                        <button class="btn-download" onclick="window.open('${file.file_url}', '_blank')"><i class="fas fa-download"></i></button>
+    resultsDiv.innerHTML = `<div style="background:rgba(255,255,255,0.2); border-radius:24px; padding:16px;">
+        <h4 style="color:#0a2b48; margin-bottom:12px;">Found ${results.length} results</h4>
+        ${results.map((file, idx) => `
+            <div class="file-item">
+                <div class="file-info">
+                    <i class="fas ${window.getFileIcon(file.file_name)}" style="color:${window.getFileColor(file.file_name)};"></i>
+                    <div>
+                        <div style="font-weight:500;">${file.file_name}</div>
+                        <div style="font-size:0.75rem; color:#1f5175;">${file.category} · ${file.subject} · ${window.formatFileSize(file.file_size || 0)}</div>
                     </div>
                 </div>
-            `;
-        });
-        html += `</div><p style="margin-top:12px; font-size:0.8rem; color:#1f5175;">Total: ${uploads.length} file(s)</p>`;
-        listDiv.innerHTML = html;
-    }).catch(err => {
-        const listDiv = document.getElementById('myUploadsList');
-        if (listDiv) listDiv.innerHTML = `<p style="color:#dc3545;">Error: ${err.message}</p>`;
-    });
-}
-window.renderMyUploads = renderMyUploads;
+                <div class="file-actions">
+                    <button class="btn-preview" onclick="previewFile('${file.file_url}','${file.file_name}','application/pdf')"><i class="fas fa-eye"></i> Preview</button>
+                    <button class="btn-download" onclick="downloadFile('${file.file_url}','${file.file_name}')"><i class="fas fa-download"></i></button>
+                </div>
+            </div>
+        `).join('')}
+    </div>`;
+};
 
-// ============================================================
-// APPROVALS PAGE (Admin Only)
-// ============================================================
-function renderApprovalsPage(container) {
-    container.innerHTML = `
-        <div class="page-container">
-            <div class="page-header">
-                <h2><i class="fas fa-clipboard-list" style="color:#0a4b78;"></i> Approval Requests</h2>
-                <button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button>
-            </div>
-            <div id="approvalList">
-                <div style="text-align:center; padding:40px; color:#1f5175;">
-                    <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-                    <p>Loading requests...</p>
-                </div>
-            </div>
-        </div>`;
-    
-    // Listen to pending requests
-    window.listenToPendingRequests((data) => {
-        const listDiv = document.getElementById('approvalList');
-        if (!listDiv) return;
-        
-        if (!data) {
-            listDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:40px;">No pending requests</p>';
-            return;
-        }
-        
-        const requests = Object.entries(data)
-            .filter(([id, req]) => req.status === 'pending')
-            .map(([id, req]) => ({ id, ...req }));
-        
-        if (requests.length === 0) {
-            listDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:40px;">✅ No pending requests</p>';
-            return;
-        }
-        
-        let html = '';
-        requests.forEach((req) => {
-            html += `
-                <div class="approval-request pending">
-                    <div class="request-info">
-                        <div class="request-title"><i class="fas fa-file-alt" style="color:#0a4b78;"></i> ${req.file_name || 'Unknown file'}</div>
-                        <div class="request-meta">
-                            <i class="fas fa-user" style="color:#0a4b78;"></i> ${req.uploaded_by || 'Unknown'}
-                            <br><i class="fas fa-clock" style="color:#0a4b78;"></i> ${req.uploaded_at ? new Date(req.uploaded_at).toLocaleString() : 'N/A'}
-                        </div>
-                    </div>
-                    <div class="request-details">
-                        <div><i class="fas fa-book"></i> <strong>Subject:</strong> ${req.subject || 'N/A'}</div>
-                    </div>
-                    <div class="request-actions">
-                        <button class="btn-success" onclick="handleApprove('${req.id}')"><i class="fas fa-check"></i> Approve</button>
-                        <button class="btn-danger" onclick="handleReject('${req.id}')"><i class="fas fa-times"></i> Reject</button>
-                    </div>
-                    <div style="margin-top:12px;"><span class="pending-badge">⏳ Pending</span></div>
-                </div>
-            `;
-        });
-        listDiv.innerHTML = html;
-    });
-}
-window.renderApprovalsPage = renderApprovalsPage;
+// =============================================================
+//  FILE PREVIEW & DOWNLOAD
+// =============================================================
+window.previewFile = function(fileUrl, fileName, fileType) {
+    window.showFilePreview(fileUrl, fileName, fileType);
+};
 
-async function handleApprove(requestId) {
-    if (!confirm('Approve this request?')) return;
-    const user = window.currentUser;
-    if (!user) return;
-    
-    const result = await window.approveRequest(requestId, user.username);
-    if (result.success) {
-        window.showToast('✅ Request approved!', 'success');
+window.downloadFile = function(fileUrl, fileName) {
+    const a = document.createElement('a');
+    a.href = fileUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast(`Downloading ${fileName}`, 'info');
+};
+
+window.deleteFile = async function(fileId) {
+    if (!window.isAdmin()) {
+        showToast('Only admin can delete files', 'error');
+        return;
     }
-}
-window.handleApprove = handleApprove;
-
-async function handleReject(requestId) {
-    if (!confirm('Reject this request?')) return;
-    const user = window.currentUser;
-    if (!user) return;
+    if (!confirm('Delete this file?')) return;
     
-    const result = await window.rejectRequest(requestId, user.username);
-    if (result.success) {
-        window.showToast('Request rejected', 'warning');
+    try {
+        // Delete from Supabase
+        const { error } = await window.supabaseClient
+            .from('files')
+            .delete()
+            .eq('id', fileId);
+        
+        if (error) throw new Error(error.message);
+        
+        // Remove from local array
+        window.appData.approvedFiles = window.appData.approvedFiles.filter(f => f.id !== fileId);
+        
+        showToast('File deleted successfully', 'success');
+        updateCounts();
+        refreshCurrentPage();
+        
+    } catch (error) {
+        console.error('Delete error:', error);
+        showToast('Failed to delete file: ' + error.message, 'error');
     }
-}
-window.handleReject = handleReject;
+};
 
-// ============================================================
-// MONITORING PAGE (Admin Only)
-// ============================================================
-function renderMonitoringPage(container) {
-    container.innerHTML = `
-        <div class="page-container">
-            <div class="page-header">
-                <h2><i class="fas fa-chart-line" style="color:#0a4b78;"></i> Monitoring Dashboard</h2>
-                <button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button>
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin:16px 0;">
-                <div class="stats-card"><div class="stat-number" id="onlineUsers">0</div><div class="stat-label">Online Users</div></div>
-                <div class="stats-card"><div class="stat-number" id="totalFiles">0</div><div class="stat-label">Total Files</div></div>
-                <div class="stats-card"><div class="stat-number" id="pendingRequests">0</div><div class="stat-label">Pending Requests</div></div>
-            </div>
-            <div id="monitoringContent">
-                <div style="text-align:center; padding:40px; color:#1f5175;">
-                    <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-                    <p>Loading...</p>
-                </div>
-            </div>
+window.showFilePreview = function(fileData, fileName, fileType) {
+    let content = '';
+    const ft = fileType ? fileType.toLowerCase() : '';
+    
+    if (ft.startsWith('image/')) {
+        content = `<img src="${fileData}" alt="${fileName}" class="file-preview" />`;
+    } else if (ft === 'application/pdf') {
+        content = `<iframe src="${fileData}" class="file-preview"></iframe>`;
+    } else {
+        content = `<div class="file-info-preview" style="padding:20px; text-align:center;">
+            <i class="fas ${window.getFileIcon(fileName)}" style="font-size:4rem; color:${window.getFileColor(fileName)};"></i>
+            <p style="margin-top:12px; color:#1f5175; font-weight:500;">${fileName}</p>
+            <p style="font-size:0.85rem; color:#1f5175;">Preview not available</p>
         </div>`;
+    }
     
-    // Listen to user status
-    window.listenToUserStatus((data) => {
-        const onlineEl = document.getElementById('onlineUsers');
-        if (onlineEl && data) {
-            const online = Object.values(data).filter(u => u.online === true).length;
-            onlineEl.textContent = online;
-        }
-    });
-    
-    // Fetch total files
-    window.fetchFilesFromSupabase().then(result => {
-        const totalEl = document.getElementById('totalFiles');
-        if (totalEl && result.success) {
-            totalEl.textContent = result.data.length;
-        }
-    });
-    
-    // Count pending requests
-    window.listenToPendingRequests((data) => {
-        const pendingEl = document.getElementById('pendingRequests');
-        if (pendingEl && data) {
-            const pending = Object.values(data).filter(r => r.status === 'pending').length;
-            pendingEl.textContent = pending;
-        }
-    });
-    
-    // Show user list
-    window.listenToUserStatus((data) => {
-        const contentDiv = document.getElementById('monitoringContent');
-        if (!contentDiv) return;
-        
-        if (!data) {
-            contentDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:20px;">No users online</p>';
-            return;
-        }
-        
-        let html = `<h4 style="color:#0a2b48; margin-bottom:12px;"><i class="fas fa-users"></i> Users</h4><div style="max-height:400px; overflow-y:auto;">`;
-        Object.entries(data).forEach(([username, user]) => {
-            const status = user.online ? '🟢 Online' : '⚪ Offline';
-            html += `
-                <div class="monitoring-item">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                        <div>
-                            <strong>${username}</strong>
-                            <span style="font-size:0.75rem; color:#1f5175; margin-left:8px;">${user.role || 'N/A'}</span>
-                            ${user.name ? `<span style="font-size:0.7rem; color:#075e54; margin-left:8px;">(${user.name})</span>` : ''}
-                        </div>
-                        <span style="font-size:0.7rem; color:${user.online ? '#28a745' : '#6c757d'};">${status}</span>
-                    </div>
-                </div>
-            `;
-        });
-        html += `</div>`;
-        contentDiv.innerHTML = html;
-    });
-}
-window.renderMonitoringPage = renderMonitoringPage;
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `<div class="modal-content">
+        <h3><i class="fas fa-eye" style="color:#17a2b8;"></i> File Preview: ${fileName}</h3>
+        ${content}
+        <div class="modal-actions">
+            <button class="btn-download" onclick="downloadFile('${fileData}','${fileName}')" style="padding:8px 20px; border-radius:20px; border:none; cursor:pointer; background:#0a4b78; color:white; font-family:'Inter',sans-serif;"><i class="fas fa-download"></i> Download</button>
+            <button class="btn-primary" onclick="this.closest('.modal').remove()">Close</button>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+};
 
-// ============================================================
-// LOGIN
-// ============================================================
-const tabBtns = document.querySelectorAll('.tab-btn');
-const forms = { student: document.getElementById('studentForm'), faculty: document.getElementById('facultyForm'), admin: document.getElementById('adminForm') };
-
-tabBtns.forEach(btn => btn.addEventListener('click', function() {
-    tabBtns.forEach(b => b.classList.remove('active'));
-    this.classList.add('active');
-    Object.keys(forms).forEach(key => { 
-        if (forms[key]) forms[key].classList.toggle('active', key === this.dataset.tab); 
-    });
-}));
-
-document.getElementById('studentForm').addEventListener('submit', async function(e) {
+// =============================================================
+//  LOGIN HANDLERS
+// =============================================================
+document.getElementById('studentForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const username = document.getElementById('studentUsername').value.trim();
     const password = document.getElementById('studentPassword').value.trim();
-    
     const match = username.match(/^732925MDR(\d{3})$/);
     if (!match || parseInt(match[1]) < 1 || parseInt(match[1]) > 63) {
-        window.showToast('Invalid register number. Must be 732925MDR001-063', 'error');
+        showToast('Invalid register number. Must be 732925MDR001-063', 'error');
         return;
     }
-    if (!password || !isValidDate(password)) {
-        window.showToast('Invalid password. Use DD/MM/YYYY', 'error');
+    if (!password || !window.isValidDate(password)) {
+        showToast('Invalid password. Use DD/MM/YYYY', 'error');
         return;
     }
-    
-    const result = await window.loginUser(username, password, 'student');
-    if (result.success) {
-        window.currentUser = result.user;
-        window.currentRole = 'student';
-        showDashboard(username, 'student', username);
-    }
+    loginUser(username, password, 'student');
 });
 
-document.getElementById('facultyForm').addEventListener('submit', async function(e) {
+document.getElementById('facultyForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const username = document.getElementById('facultyUsername').value.trim();
     const password = document.getElementById('facultyPassword').value.trim();
-    
     const parts = username.split(' ');
     if (parts.length < 2 || parts.some(p => !p.match(/^[A-Z]+$/))) {
-        window.showToast('Faculty name: All caps with spaces (e.g., SANJAY R)', 'error');
+        showToast('Faculty name: All caps with spaces (e.g., SANJAY R)', 'error');
         return;
     }
-    if (!password || !isValidDate(password)) {
-        window.showToast('Invalid password. Use DD/MM/YYYY', 'error');
+    if (!password || !window.isValidDate(password)) {
+        showToast('Invalid password. Use DD/MM/YYYY', 'error');
         return;
     }
-    
-    const result = await window.loginUser(username, password, 'faculty');
-    if (result.success) {
-        window.currentUser = result.user;
-        window.currentRole = 'faculty';
-        showDashboard(username, 'faculty', username);
-    }
+    loginUser(username, password, 'faculty');
 });
 
-document.getElementById('adminForm').addEventListener('submit', async function(e) {
+document.getElementById('adminForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const username = document.getElementById('adminUsername').value.trim();
     const password = document.getElementById('adminPassword').value.trim();
-    
     if (username === '732925MDR049' && password === 'MDR2008') {
-        const result = await window.loginUser(username, password, 'admin');
-        if (result.success) {
-            window.currentUser = result.user;
-            window.currentRole = 'admin';
-            showDashboard(username, 'admin', 'Admin');
-        }
+        loginUser(username, password, 'admin');
     } else {
-        window.showToast('Invalid admin credentials', 'error');
+        showToast('Invalid admin credentials', 'error');
     }
 });
 
-// ============================================================
-// DASHBOARD
-// ============================================================
-function showDashboard(username, role, displayName) {
-    document.getElementById('loginPage').classList.add('hidden');
-    document.getElementById('dashboardPage').classList.remove('hidden');
-    
-    const approvalsCard = document.getElementById('approvalsCard');
-    const monitoringCard = document.getElementById('monitoringCard');
-    
-    if (approvalsCard) approvalsCard.style.display = role === 'admin' ? 'block' : 'none';
-    if (monitoringCard) monitoringCard.style.display = role === 'admin' ? 'block' : 'none';
-    
-    document.getElementById('greetingUser').textContent = displayName + (role === 'admin' ? ' (Admin)' : role === 'faculty' ? ' (Faculty)' : '');
-    document.getElementById('roleBadge').innerHTML = role === 'admin' ? '<span class="admin-badge"><i class="fas fa-user-shield"></i> Admin</span>' : '';
-    
-    // Get profile from Firebase
-    window.getUserProfile(username).then(profile => {
-        const nameDisplay = document.getElementById('userNameDisplay');
-        if (nameDisplay && profile) {
-            nameDisplay.textContent = profile.name || username;
-        }
-    });
-    
-    // Start listening to pending requests for badge
-    window.listenToPendingRequests((data) => {
-        updatePendingBadge(data);
-    });
-    
-    // Listen to notifications
-    window.listenToNotifications((data) => {
-        if (data) {
-            const notifications = Object.values(data);
-            const unread = notifications.filter(n => !n.read).length;
-            if (unread > 0) {
-                window.showToast(`📬 ${unread} new notification(s)`, 'info');
+// =============================================================
+//  TAB SWITCHING
+// =============================================================
+const tabBtns = document.querySelectorAll('.tab-btn');
+const forms = {
+    student: document.getElementById('studentForm'),
+    faculty: document.getElementById('facultyForm'),
+    admin: document.getElementById('adminForm')
+};
+
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        Object.keys(forms).forEach(key => {
+            if (forms[key]) {
+                forms[key].classList.toggle('active', key === this.dataset.tab);
             }
-        }
+        });
     });
+});
+
+// =============================================================
+//  INIT
+// =============================================================
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 Medi Electro Vault starting...');
     
-    // Update counts
-    updateCounts();
-}
-
-function updatePendingBadge(data) {
-    const badge = document.getElementById('pendingCount');
-    if (!badge) return;
+    // Initialize connections
+    await testFirebaseConnection();
+    await testSupabaseConnection();
     
-    if (data && window.currentRole === 'admin') {
-        const pending = Object.values(data).filter(r => r.status === 'pending').length;
-        if (pending > 0) {
-            badge.style.display = 'flex';
-            badge.textContent = pending;
-        } else {
-            badge.style.display = 'none';
-        }
-    } else {
-        badge.style.display = 'none';
-    }
-}
+    // Check if user was previously logged in (session persistence)
+    // For simplicity, we start at login page
+    document.getElementById('loginPage').classList.remove('hidden');
+    document.getElementById('dashboardPage').classList.add('hidden');
+    
+    console.log('✅ Medi Electro Vault ready!');
+});
 
-// ============================================================
-// UPDATE COUNTS
-// ============================================================
-function updateCounts() {
-    window.fetchFilesFromSupabase().then(result => {
-        if (!result.success) return;
-        
-        const qpEl = document.getElementById('qpCount');
-        const smEl = document.getElementById('smCount');
-        
-        if (qpEl) qpEl.textContent = result.data.length + ' files';
-        if (smEl) smEl.textContent = result.data.length + ' files';
-    });
-}
+// =============================================================
+//  EXPOSE FUNCTIONS GLOBALLY
+// =============================================================
+window.logoutUser = logoutUser;
+window.loginUser = loginUser;
+window.getUserProfile = getUserProfile;
+window.saveUserProfile = saveUserProfile;
+window.updateUserOnlineStatus = updateUserOnlineStatus;
+window.loadApprovedFiles = loadApprovedFiles;
+window.uploadFilesDirect = uploadFilesDirect;
+window.requestUploadApproval = requestUploadApproval;
+window.deleteFile = deleteFile;
+window.previewFile = previewFile;
+window.downloadFile = downloadFile;
+window.showToast = showToast;
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
 
-// ============================================================
-// INIT
-// ============================================================
-document.getElementById('loginPage').classList.remove('hidden');
-document.getElementById('dashboardPage').classList.add('hidden');
-
-console.log('✅ Medi Electro Vault UI Ready');
+console.log('📁 All systems ready!');
 </script>
 </body>
 </html>
