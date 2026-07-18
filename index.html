@@ -536,11 +536,10 @@
 // FIREBASE CONFIGURATION
 // =============================================================
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get, child, push, update, remove, onValue, off, serverTimestamp } from "firebase/database";
+import { getDatabase, ref, set, get, child, push, update, remove, onValue, off } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
-// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyBI5RgA04gKmMaZcUGKRDKs1yCZ0DxtWGU",
     authDomain: "medi-electro-vault.firebaseapp.com",
@@ -569,7 +568,6 @@ window.firebaseUpdate = update;
 window.firebaseRemove = remove;
 window.firebaseOnValue = onValue;
 window.firebaseOff = off;
-window.firebaseServerTimestamp = serverTimestamp;
 
 console.log('🔥 Firebase initialized successfully!');
 
@@ -587,7 +585,6 @@ function initSupabase() {
             console.error('❌ Supabase CDN not loaded');
             return null;
         }
-
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
             auth: {
                 persistSession: false,
@@ -595,7 +592,6 @@ function initSupabase() {
                 detectSessionInUrl: false
             }
         });
-        
         window.supabaseClient = supabaseClient;
         console.log('✅ Supabase client initialized successfully!');
         return supabaseClient;
@@ -616,7 +612,10 @@ async function testFirebaseConnection() {
             statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
             statusEl.className = 'status-badge testing';
         }
-        await set(ref(firebaseDb, 'test_connection'), { timestamp: Date.now(), message: 'Firebase connected!' });
+        await set(ref(firebaseDb, 'test_connection'), {
+            timestamp: Date.now(),
+            message: 'Firebase connected!'
+        });
         const snapshot = await get(child(ref(firebaseDb), 'test_connection'));
         if (snapshot.exists()) {
             console.log('✅ Firebase Connected Successfully!');
@@ -646,24 +645,28 @@ async function testSupabaseConnection() {
         }
         const client = window.supabaseClient;
         if (!client) throw new Error('Client not initialized');
-        const { data, error } = await client.from('files').select('*', { count: 'exact', head: true });
-        if (error && error.code === '42P01') {
-            console.log('✅ Supabase Connected (table "files" not found - create it)');
-            if (statusEl) {
-                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
-                statusEl.className = 'status-badge connected';
+        const { data, error } = await client
+            .from('files')
+            .select('*', { count: 'exact', head: true });
+        if (error) {
+            if (error.code === '42P01') {
+                console.log('✅ Supabase Connected (table "files" not found - create it)');
+                if (statusEl) {
+                    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
+                    statusEl.className = 'status-badge connected';
+                }
+                return true;
             }
-            return true;
-        }
-        if (error && (error.code === '42501' || error.message.includes('permission'))) {
-            console.log('✅ Supabase Connected (RLS enabled - add policies)');
-            if (statusEl) {
-                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
-                statusEl.className = 'status-badge connected';
+            if (error.code === '42501' || error.message.includes('permission')) {
+                console.log('✅ Supabase Connected (RLS enabled - add policies)');
+                if (statusEl) {
+                    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
+                    statusEl.className = 'status-badge connected';
+                }
+                return true;
             }
-            return true;
+            throw error;
         }
-        if (error) throw error;
         console.log('✅ Supabase Connected Successfully!');
         if (statusEl) {
             statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
@@ -681,70 +684,119 @@ async function testSupabaseConnection() {
 }
 
 // =============================================================
-// USER PROFILE MANAGEMENT
+// USER PROFILE FUNCTIONS
 // =============================================================
-
-async function saveUserProfile(username, profileData) {
-    try {
-        // Save to Firebase
-        const userRef = ref(firebaseDb, `users/${username}`);
-        await set(userRef, {
-            ...profileData,
-            username: username,
-            lastLogin: Date.now(),
-            updatedAt: Date.now()
-        });
-        console.log('🔥 Profile saved to Firebase:', username);
-        return true;
-    } catch (error) {
-        console.error('❌ Firebase profile save error:', error.message);
-        return false;
-    }
-}
 
 async function getUserProfile(username) {
     try {
-        const userRef = ref(firebaseDb, `users/${username}`);
-        const snapshot = await get(userRef);
+        const snapshot = await get(child(ref(firebaseDb), `users/${username}`));
         if (snapshot.exists()) {
             return snapshot.val();
         }
         return null;
     } catch (error) {
-        console.error('❌ Firebase profile get error:', error.message);
+        console.error('❌ Get profile error:', error.message);
         return null;
     }
 }
 
-// =============================================================
-// REAL-TIME USER LISTENERS
-// =============================================================
+async function saveUserProfile(username, data) {
+    try {
+        await set(ref(firebaseDb, `users/${username}`), {
+            ...data,
+            username: username,
+            updatedAt: Date.now()
+        });
+        console.log('✅ Profile saved for:', username);
+        return true;
+    } catch (error) {
+        console.error('❌ Save profile error:', error.message);
+        return false;
+    }
+}
 
 function listenToUserProfile(username, callback) {
     const userRef = ref(firebaseDb, `users/${username}`);
     onValue(userRef, (snapshot) => {
         if (snapshot.exists()) {
             const data = snapshot.val();
-            console.log('📡 User profile updated:', username);
+            console.log('📡 Profile updated for:', username);
             if (callback) callback(data);
         }
     });
 }
 
-function listenToAllUsers(callback) {
-    const usersRef = ref(firebaseDb, 'users');
-    onValue(usersRef, (snapshot) => {
+// =============================================================
+// FILE FUNCTIONS
+// =============================================================
+
+async function uploadFileToSupabase(file, path) {
+    try {
+        if (!supabaseClient) throw new Error('Supabase not initialized');
+        const filePath = path || `uploads/${Date.now()}_${file.name}`;
+        const { data, error } = await supabaseClient.storage
+            .from('pdf-files')
+            .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        if (error) throw new Error(error.message);
+        const { data: urlData } = supabaseClient.storage.from('pdf-files').getPublicUrl(filePath);
+        return { success: true, path: filePath, url: urlData.publicUrl };
+    } catch (error) {
+        console.error('❌ Storage upload error:', error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+async function saveFileToBoth(fileData) {
+    const results = { firebase: false, supabase: false };
+    try {
+        const firebaseRef = ref(firebaseDb, `files/${fileData.id}`);
+        await set(firebaseRef, {
+            id: fileData.id,
+            fileName: fileData.fileName,
+            subject: fileData.subject,
+            uploadedBy: fileData.uploadedBy,
+            uploadedAt: fileData.uploadedAt,
+            fileUrl: fileData.fileUrl || '',
+            type: 'file'
+        });
+        console.log('🔥 Saved to Firebase:', fileData.fileName);
+        results.firebase = true;
+    } catch (error) {
+        console.error('❌ Firebase save error:', error.message);
+    }
+    try {
+        if (supabaseClient) {
+            const { data, error } = await supabaseClient
+                .from('files')
+                .insert([{
+                    file_name: fileData.fileName,
+                    subject: fileData.subject,
+                    uploaded_by: fileData.uploadedBy,
+                    file_url: fileData.fileUrl || '',
+                    uploaded_at: new Date(fileData.uploadedAt).toISOString()
+                }]);
+            if (error) throw error;
+            console.log('📊 Saved to Supabase:', fileData.fileName);
+            results.supabase = true;
+        }
+    } catch (error) {
+        console.error('❌ Supabase save error:', error.message);
+    }
+    return results;
+}
+
+function listenToFiles(callback) {
+    const filesRef = ref(firebaseDb, 'files');
+    onValue(filesRef, (snapshot) => {
         if (snapshot.exists()) {
             const data = snapshot.val();
-            console.log('📡 All users updated:', Object.keys(data).length);
+            console.log('📡 Files updated:', Object.keys(data).length);
             if (callback) callback(data);
+        } else {
+            if (callback) callback({});
         }
     });
 }
-
-// =============================================================
-// REAL-TIME PENDING UPLOADS
-// =============================================================
 
 function listenToPendingUploads(callback) {
     const pendingRef = ref(firebaseDb, 'pending_uploads');
@@ -759,59 +811,31 @@ function listenToPendingUploads(callback) {
     });
 }
 
-// =============================================================
-// REAL-TIME APPROVED FILES
-// =============================================================
-
-function listenToApprovedFiles(callback) {
-    const filesRef = ref(firebaseDb, 'files');
-    onValue(filesRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('📡 Approved files updated:', Object.keys(data).length);
-            if (callback) callback(data);
-        } else {
-            if (callback) callback({});
-        }
-    });
-}
-
-// =============================================================
-// SUBMIT PENDING UPLOAD
-// =============================================================
-
 async function submitPendingUpload(fileData) {
     try {
-        const pendingRef = ref(firebaseDb, `pending_uploads/${fileData.id}`);
-        await set(pendingRef, {
+        const id = fileData.id || Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        await set(ref(firebaseDb, `pending_uploads/${id}`), {
             ...fileData,
+            id,
             status: 'pending',
             submittedAt: Date.now()
         });
         console.log('📤 Pending upload submitted:', fileData.fileName);
-        return { success: true };
+        return { success: true, id };
     } catch (error) {
         console.error('❌ Pending upload error:', error.message);
         return { success: false, error: error.message };
     }
 }
 
-// =============================================================
-// APPROVE UPLOAD
-// =============================================================
-
-async function approveUpload(pendingId, fileData) {
+async function approvePendingUpload(pendingId, fileData) {
     try {
-        // Move to approved files
-        const fileRef = ref(firebaseDb, `files/${pendingId}`);
-        await set(fileRef, {
+        await set(ref(firebaseDb, `files/${pendingId}`), {
             ...fileData,
             status: 'approved',
             approvedAt: Date.now()
         });
-        // Remove from pending
-        const pendingRef = ref(firebaseDb, `pending_uploads/${pendingId}`);
-        await remove(pendingRef);
+        await remove(ref(firebaseDb, `pending_uploads/${pendingId}`));
         console.log('✅ Upload approved:', fileData.fileName);
         return { success: true };
     } catch (error) {
@@ -820,19 +844,12 @@ async function approveUpload(pendingId, fileData) {
     }
 }
 
-// =============================================================
-// REJECT UPLOAD
-// =============================================================
-
-async function rejectUpload(pendingId, fileData) {
+async function rejectPendingUpload(pendingId, fileData) {
     try {
-        // Remove from pending
-        const pendingRef = ref(firebaseDb, `pending_uploads/${pendingId}`);
-        await remove(pendingRef);
-        // Optionally delete from storage
-        if (fileData.storagePath) {
+        await remove(ref(firebaseDb, `pending_uploads/${pendingId}`));
+        if (fileData.storagePath && supabaseClient) {
             try {
-                await window.supabaseClient.storage.from('pdf-files').remove([fileData.storagePath]);
+                await supabaseClient.storage.from('pdf-files').remove([fileData.storagePath]);
             } catch (e) {
                 console.warn('Storage delete warning:', e.message);
             }
@@ -848,19 +865,18 @@ async function rejectUpload(pendingId, fileData) {
 // =============================================================
 // EXPOSE FOR GLOBAL USE
 // =============================================================
-
+window.getUserProfile = getUserProfile;
+window.saveUserProfile = saveUserProfile;
+window.listenToUserProfile = listenToUserProfile;
+window.uploadFileToSupabase = uploadFileToSupabase;
+window.saveFileToBoth = saveFileToBoth;
+window.listenToFiles = listenToFiles;
+window.listenToPendingUploads = listenToPendingUploads;
+window.submitPendingUpload = submitPendingUpload;
+window.approvePendingUpload = approvePendingUpload;
+window.rejectPendingUpload = rejectPendingUpload;
 window.testFirebase = testFirebaseConnection;
 window.testSupabase = testSupabaseConnection;
-window.saveUserProfile = saveUserProfile;
-window.getUserProfile = getUserProfile;
-window.listenToUserProfile = listenToUserProfile;
-window.listenToAllUsers = listenToAllUsers;
-window.listenToPendingUploads = listenToPendingUploads;
-window.listenToApprovedFiles = listenToApprovedFiles;
-window.submitPendingUpload = submitPendingUpload;
-window.approveUpload = approveUpload;
-window.rejectUpload = rejectUpload;
-window.supabaseClient = supabaseClient;
 
 // =============================================================
 // INIT ON LOAD
@@ -870,17 +886,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     initSupabase();
     await testFirebaseConnection();
     await testSupabaseConnection();
+    console.log('📁 Firebase + Supabase integration ready!');
 });
-
-console.log('📁 Firebase + Supabase integration ready!');
 </script>
 
 <!-- ============================================================ -->
-<!-- MAIN APPLICATION CODE                                        -->
+<!-- YOUR APPLICATION CODE - FULLY FUNCTIONAL                     -->
 <!-- ============================================================ -->
 <script>
 // ============================================================
-//  COMPLETE APPLICATION LOGIC - FULLY FUNCTIONAL
+//  COMPLETE APPLICATION LOGIC
 // ============================================================
 
 // ======================== PASSWORD TOGGLE ========================
@@ -943,13 +958,134 @@ window.isValidDate = isValidDate;
 let userAvatarData = {};
 let currentUsername = null;
 let currentRole = null;
-let currentUserProfile = null;
+let appData = null;
+let registeredUsers = {};
+let userNamesData = {};
+let approvalRequests = [];
 
+// ======================== STORAGE FUNCTIONS ========================
+function getDefaultData() {
+    return {
+        questionPapers: {
+            cat1: { subjects: ['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'], files: {} },
+            cat2: { subjects: ['BME201','BME202','BME203','BME204','BME205','BME206','BME207','BME208'], files: {} },
+            cat3: { subjects: ['BME301','BME302','BME303','BME304','BME305','BME306','BME307','BME308'], files: {} }
+        },
+        subjectMaterials: { subjects: ['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'], files: {} },
+        uploadHistory: [],
+        approvalRequests: [],
+        approvedRequests: [],
+        userLogins: [],
+        userActivity: [],
+        userEmails: {}
+    };
+}
+
+function loadData() {
+    try {
+        const raw = localStorage.getItem('mediVaultData');
+        if (raw) {
+            const data = JSON.parse(raw);
+            const def = getDefaultData();
+            for (let k in def) if (!data[k]) data[k] = def[k];
+            return data;
+        }
+    } catch(e) { console.error('Load data error:', e); }
+    return getDefaultData();
+}
+
+function saveData(data) {
+    localStorage.setItem('mediVaultData', JSON.stringify(data));
+    updateCounts();
+    updatePendingBadge();
+}
+
+function loadUsers() {
+    try {
+        const raw = localStorage.getItem('mediVaultUsers');
+        return raw ? JSON.parse(raw) : {};
+    } catch(e) { return {}; }
+}
+
+function saveUsers(users) {
+    localStorage.setItem('mediVaultUsers', JSON.stringify(users));
+}
+
+function loadUserNamesData() {
+    try {
+        const raw = localStorage.getItem('mediVaultUserNames');
+        return raw ? JSON.parse(raw) : {};
+    } catch(e) { return {}; }
+}
+
+function saveUserNamesData(data) {
+    localStorage.setItem('mediVaultUserNames', JSON.stringify(data));
+}
+
+function getStoredUserName(username) {
+    const data = loadUserNamesData();
+    return data[username] || null;
+}
+
+function setStoredUserName(username, name) {
+    const data = loadUserNamesData();
+    data[username] = name;
+    saveUserNamesData(data);
+}
+
+// ======================== INIT DATA ========================
+appData = loadData();
+registeredUsers = loadUsers();
+userNamesData = loadUserNamesData();
+
+// ======================== HELPERS ========================
+function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2,5); }
+window.generateId = generateId;
+
+function getFileType(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['jpg','jpeg','png','gif','bmp','webp','svg'].includes(ext)) return 'image';
+    if (['pdf'].includes(ext)) return 'pdf';
+    if (['doc','docx','txt','md','rtf'].includes(ext)) return 'document';
+    return 'other';
+}
+
+function getFileIcon(filename) {
+    const t = getFileType(filename);
+    if (t === 'image') return 'fa-file-image';
+    if (t === 'pdf') return 'fa-file-pdf';
+    if (t === 'document') return 'fa-file-word';
+    return 'fa-file';
+}
+
+function getFileColor(filename) {
+    const t = getFileType(filename);
+    if (t === 'image') return '#e67e22';
+    if (t === 'pdf') return '#c0392b';
+    if (t === 'document') return '#2b5797';
+    return '#6c757d';
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function isAdmin() { return currentRole === 'admin'; }
+function isFaculty() { return currentRole === 'faculty'; }
+function isAdminOrFaculty() { return isAdmin() || isFaculty(); }
+
+window.isAdmin = isAdmin;
+window.isFaculty = isFaculty;
+window.isAdminOrFaculty = isAdminOrFaculty;
+
+// ======================== UI FUNCTIONS ========================
 function getAvatarInitials(username) {
     if (!username) return 'U';
     const parts = username.split(' ');
-    if (parts.length >= 2) return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
-    return username.substring(0,2).toUpperCase();
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return username.substring(0, 2).toUpperCase();
 }
 
 function updateAvatarDisplay() {
@@ -966,7 +1102,6 @@ function updateAvatarDisplay() {
         initialsEl.textContent = getAvatarInitials(currentUsername);
     }
 }
-window.updateAvatarDisplay = updateAvatarDisplay;
 
 function showAvatarUpload() {
     if (!currentUsername) return;
@@ -1006,7 +1141,6 @@ function showAvatarUpload() {
         }
     });
 }
-window.showAvatarUpload = showAvatarUpload;
 
 function removeAvatar() {
     if (confirm('Are you sure you want to remove your profile picture?')) {
@@ -1017,18 +1151,12 @@ function removeAvatar() {
         showMessage('Avatar Removed', 'Your profile picture has been removed.');
     }
 }
-window.removeAvatar = removeAvatar;
 
 function saveUserAvatar(username, data) {
     const key = 'userAvatar_' + username;
     if (data) localStorage.setItem(key, data);
     else localStorage.removeItem(key);
-    // Also save to Firebase profile
-    if (data && window.saveUserProfile) {
-        window.saveUserProfile(username, { avatar: data });
-    }
 }
-window.saveUserAvatar = saveUserAvatar;
 
 function loadUserAvatar(username) {
     const key = 'userAvatar_' + username;
@@ -1036,27 +1164,83 @@ function loadUserAvatar(username) {
     userAvatarData = data ? { data: data } : {};
     updateAvatarDisplay();
 }
-window.loadUserAvatar = loadUserAvatar;
 
-// ======================== STORAGE ========================
-const STORAGE_KEY = 'mediVaultData';
-const USERS_KEY = 'mediVaultUsers';
-const USERNAMES_KEY = 'mediVaultUserNames';
+// ======================== MODAL ========================
+function showModal(title, content, onConfirm) {
+    const existing = document.querySelector('.modal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `<div class="modal-content"><h3>${title}</h3>${content}<div class="modal-actions"><button class="btn-outline" onclick="this.closest('.modal').remove()">Cancel</button><button class="btn-primary" id="modalConfirmBtn">Confirm</button></div></div>`;
+    document.body.appendChild(modal);
+    document.getElementById('modalConfirmBtn').addEventListener('click', function() { if (onConfirm) onConfirm(); modal.remove(); });
+}
 
-function broadcastUpdate() { localStorage.setItem('mediVaultUpdate', Date.now().toString()); }
-window.broadcastUpdate = broadcastUpdate;
+function showMessage(title, message) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `<div class="modal-content"><h3>${title}</h3><p>${message}</p><div class="modal-actions"><button class="btn-primary" onclick="this.closest('.modal').remove()">OK</button></div></div>`;
+    document.body.appendChild(modal);
+}
 
-window.addEventListener('storage', function(e) {
-    if (e.key === STORAGE_KEY || e.key === USERS_KEY || e.key === USERNAMES_KEY || e.key === 'mediVaultUpdate') {
-        appData = loadData();
-        registeredUsers = loadUsers();
-        userNamesData = loadUserNamesData();
-        updateCounts();
-        updatePendingBadge();
-        refreshCurrentPage();
-        updateUserNameDisplay();
+function showFilePreview(fileData, fileName, fileType) {
+    let content = '';
+    const ft = fileType ? fileType.toLowerCase() : '';
+    if (ft.startsWith('image/')) {
+        content = `<img src="${fileData}" alt="${fileName}" class="file-preview" />`;
+    } else if (ft === 'application/pdf') {
+        content = `<iframe src="${fileData}" class="file-preview"></iframe>`;
+    } else if (ft.includes('video')) {
+        content = `<video controls class="file-preview" style="max-width:100%;"><source src="${fileData}" type="${fileType}">Your browser does not support the video tag.</video>`;
+    } else if (ft.includes('audio')) {
+        content = `<audio controls style="width:100%; margin:20px 0;"><source src="${fileData}" type="${fileType}">Your browser does not support the audio tag.</audio>`;
+    } else {
+        content = `<div class="file-info-preview" style="padding:20px; text-align:center;"><i class="fas ${getFileIcon(fileName)}" style="font-size:4rem; color:${getFileColor(fileName)};"></i><p style="margin-top:12px; color:#1f5175; font-weight:500;">${fileName}</p><p style="font-size:0.85rem; color:#1f5175;">Type: ${fileType || 'Unknown'}</p><p style="font-size:0.85rem; color:#1f5175;">Size: ${formatFileSize(fileData.length * 0.75)}</p><p style="margin-top:12px; color:#1f5175; font-size:0.9rem;"><i class="fas fa-info-circle"></i> Preview not available for this file type.<br>Click Download to view the file.</p></div>`;
     }
-});
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `<div class="modal-content"><h3><i class="fas fa-eye" style="color:#17a2b8;"></i> File Preview: ${fileName}</h3>${content}<div class="modal-actions"><button class="btn-download" onclick="downloadFileFromPreview('${fileData}','${fileName}')" style="padding:8px 20px; border-radius:20px; border:none; cursor:pointer; background:#0a4b78; color:white; font-family:'Inter',sans-serif;"><i class="fas fa-download"></i> Download</button><button class="btn-primary" onclick="this.closest('.modal').remove()">Close</button></div></div>`;
+    document.body.appendChild(modal);
+}
+
+function downloadFileFromPreview(fileData, fileName) {
+    const a = document.createElement('a');
+    a.href = fileData;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// ======================== NAVIGATION ========================
+let uploadCategory = 'questionPapers';
+
+function showPage(page) {
+    const container = document.getElementById('pageContainer');
+    if (!container) return;
+    if (page === 'dashboard') { container.innerHTML = ''; return; }
+    if (page === 'approvals' && !isAdmin()) {
+        container.innerHTML = '<div class="page-container"><p style="color:#dc3545; text-align:center; padding:40px;"><i class="fas fa-lock" style="font-size:2rem; display:block; margin-bottom:12px;"></i>Access Denied. Only Admin can access approvals.</p></div>';
+        return;
+    }
+    if (page === 'monitoring' && !isAdminOrFaculty()) {
+        container.innerHTML = '<div class="page-container"><p style="color:#dc3545; text-align:center; padding:40px;"><i class="fas fa-lock" style="font-size:2rem; display:block; margin-bottom:12px;"></i>Access Denied. Only Admin and Faculty can access monitoring.</p></div>';
+        return;
+    }
+    const pages = {
+        questionPapers: renderQuestionPapers,
+        subjectMaterials: renderSubjectMaterials,
+        upload: renderUploadPage,
+        search: renderSearchPage,
+        myUploads: renderMyUploads,
+        approvals: renderApprovalsPage,
+        monitoring: renderMonitoringPage,
+        profile: renderProfilePage,
+        department: renderDepartmentPage
+    };
+    if (pages[page]) pages[page](container);
+    else container.innerHTML = '<p>Page not found</p>';
+}
 
 function refreshCurrentPage() {
     const container = document.getElementById('pageContainer');
@@ -1076,247 +1260,6 @@ function refreshCurrentPage() {
         }
     }
 }
-window.refreshCurrentPage = refreshCurrentPage;
-
-// ======================== USER NAME ========================
-let userNamesData = {};
-
-function loadUserNamesData() {
-    try { const raw = localStorage.getItem(USERNAMES_KEY); return raw ? JSON.parse(raw) : {}; } catch(e) { return {}; }
-}
-function saveUserNamesData(data) { localStorage.setItem(USERNAMES_KEY, JSON.stringify(data)); broadcastUpdate(); }
-function getStoredUserName(username) { const data = loadUserNamesData(); return data[username] || null; }
-function setStoredUserName(username, name) { const data = loadUserNamesData(); data[username] = name; saveUserNamesData(data); }
-function updateUserNameDisplay() {
-    const el = document.getElementById('userNameDisplay');
-    if (el && currentUsername) {
-        const name = getStoredUserName(currentUsername);
-        el.textContent = name || 'Not set';
-    }
-}
-window.getStoredUserName = getStoredUserName;
-window.setStoredUserName = setStoredUserName;
-window.updateUserNameDisplay = updateUserNameDisplay;
-
-// ======================== DATA ========================
-function getDefaultData() {
-    return {
-        questionPapers: {
-            cat1: { subjects: ['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'], files: {} },
-            cat2: { subjects: ['BME201','BME202','BME203','BME204','BME205','BME206','BME207','BME208'], files: {} },
-            cat3: { subjects: ['BME301','BME302','BME303','BME304','BME305','BME306','BME307','BME308'], files: {} }
-        },
-        subjectMaterials: { subjects: ['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'], files: {} },
-        uploadHistory: [],
-        approvalRequests: [],
-        approvedRequests: [],
-        userLogins: [],
-        userActivity: [],
-        userEmails: {}
-    };
-}
-
-function loadUsers() {
-    try { const raw = localStorage.getItem(USERS_KEY); return raw ? JSON.parse(raw) : {}; } catch(e) { return {}; }
-}
-function saveUsers(users) { localStorage.setItem(USERS_KEY, JSON.stringify(users)); broadcastUpdate(); }
-
-function loadData() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-            const data = JSON.parse(raw);
-            const def = getDefaultData();
-            for (let k in def) if (!data[k]) data[k] = def[k];
-            for (let cat in def.questionPapers) {
-                if (!data.questionPapers[cat]) data.questionPapers[cat] = { subjects: [...def.questionPapers[cat].subjects], files: {} };
-                if (!data.questionPapers[cat].subjects || data.questionPapers[cat].subjects.length===0) data.questionPapers[cat].subjects = [...def.questionPapers[cat].subjects];
-                if (!data.questionPapers[cat].files) data.questionPapers[cat].files = {};
-            }
-            if (!data.subjectMaterials.subjects || data.subjectMaterials.subjects.length===0) data.subjectMaterials.subjects = [...def.subjectMaterials.subjects];
-            if (!data.subjectMaterials.files) data.subjectMaterials.files = {};
-            if (!data.approvalRequests) data.approvalRequests = [];
-            if (!data.approvedRequests) data.approvedRequests = [];
-            if (!data.userLogins) data.userLogins = [];
-            if (!data.userActivity) data.userActivity = [];
-            if (!data.userEmails) data.userEmails = {};
-            return data;
-        }
-    } catch(e) {}
-    return getDefaultData();
-}
-
-function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    updateCounts();
-    updatePendingBadge();
-    broadcastUpdate();
-}
-window.saveData = saveData;
-
-// ======================== GLOBALS ========================
-let appData = loadData();
-let registeredUsers = loadUsers();
-
-// ======================== HELPERS ========================
-function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2,5); }
-window.generateId = generateId;
-
-function getFileType(filename) {
-    const ext = filename.split('.').pop().toLowerCase();
-    if (['jpg','jpeg','png','gif','bmp','webp','svg'].includes(ext)) return 'image';
-    if (['pdf'].includes(ext)) return 'pdf';
-    if (['doc','docx','txt','md','rtf'].includes(ext)) return 'document';
-    return 'other';
-}
-function getFileIcon(filename) { const t=getFileType(filename); if(t==='image') return 'fa-file-image'; if(t==='pdf') return 'fa-file-pdf'; if(t==='document') return 'fa-file-word'; return 'fa-file'; }
-function getFileColor(filename) { const t=getFileType(filename); if(t==='image') return '#e67e22'; if(t==='pdf') return '#c0392b'; if(t==='document') return '#2b5797'; return '#6c757d'; }
-function formatFileSize(bytes) { if(bytes<1024) return bytes+' B'; if(bytes<1024*1024) return (bytes/1024).toFixed(1)+' KB'; return (bytes/(1024*1024)).toFixed(1)+' MB'; }
-function isAdmin() { return currentRole === 'admin'; }
-function isFaculty() { return currentRole === 'faculty'; }
-function isAdminOrFaculty() { return isAdmin() || isFaculty(); }
-window.isAdmin = isAdmin;
-window.isFaculty = isFaculty;
-window.isAdminOrFaculty = isAdminOrFaculty;
-
-function updateCounts() {
-    let qp=0, sm=0;
-    for (let cat in appData.questionPapers) {
-        const files = appData.questionPapers[cat].files || {};
-        for (let s in files) qp += files[s].length;
-    }
-    const smFiles = appData.subjectMaterials.files || {};
-    for (let s in smFiles) sm += smFiles[s].length;
-    const qpEl = document.getElementById('qpCount');
-    const smEl = document.getElementById('smCount');
-    if (qpEl) qpEl.textContent = qp + ' files';
-    if (smEl) smEl.textContent = sm + ' files';
-}
-
-function updatePendingBadge() {
-    const pendingCount = appData.approvalRequests ? appData.approvalRequests.filter(r => r.status === 'pending').length : 0;
-    const badge = document.getElementById('pendingCount');
-    if (badge) {
-        if (pendingCount > 0 && isAdmin()) {
-            badge.style.display = 'flex';
-            badge.textContent = pendingCount;
-        } else badge.style.display = 'none';
-    }
-}
-window.updatePendingBadge = updatePendingBadge;
-
-function registerUser(username, password, role) {
-    if (registeredUsers[username]) return false;
-    registeredUsers[username] = { password, role, registeredAt: Date.now() };
-    saveUsers(registeredUsers);
-    // Also save to Firebase
-    if (window.saveUserProfile) {
-        window.saveUserProfile(username, { role: role, registeredAt: Date.now() });
-    }
-    return true;
-}
-function validateUser(username, password) {
-    if (registeredUsers[username]) return registeredUsers[username].password === password;
-    return false;
-}
-function updateUserPassword(username, newPassword) {
-    if (registeredUsers[username]) { registeredUsers[username].password = newPassword; saveUsers(registeredUsers); return true; }
-    return false;
-}
-function removeUser(username) {
-    if (username === '732925MDR049') { alert('Cannot remove admin user'); return false; }
-    if (registeredUsers[username]) { delete registeredUsers[username]; saveUsers(registeredUsers); return true; }
-    return false;
-}
-function removeMultipleUsers(usernames) {
-    let count=0;
-    usernames.forEach(u => { if(u!=='732925MDR049' && registeredUsers[u]) { delete registeredUsers[u]; count++; } });
-    if(count>0) saveUsers(registeredUsers);
-    return count;
-}
-function logUserActivity(username, role, action, details) {
-    appData.userActivity.push({ username, role, action, details, timestamp: Date.now() });
-    if(appData.userActivity.length>500) appData.userActivity = appData.userActivity.slice(-500);
-    saveData(appData);
-}
-function logUserLogin(username, role) {
-    appData.userLogins.push({ username, role, timestamp: Date.now() });
-    if(appData.userLogins.length>500) appData.userLogins = appData.userLogins.slice(-500);
-    saveData(appData);
-    logUserActivity(username, role, 'Login', 'User logged in');
-}
-function saveUserEmail(username, email) { appData.userEmails[username] = email; saveData(appData); }
-function getUserEmail(username) { return appData.userEmails[username] || ''; }
-window.getUserEmail = getUserEmail;
-window.saveUserEmail = saveUserEmail;
-
-// ======================== MODAL ========================
-function showModal(title, content, onConfirm) {
-    const existing = document.querySelector('.modal');
-    if(existing) existing.remove();
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `<div class="modal-content"><h3>${title}</h3>${content}<div class="modal-actions"><button class="btn-outline" onclick="this.closest('.modal').remove()">Cancel</button><button class="btn-primary" id="modalConfirmBtn">Confirm</button></div></div>`;
-    document.body.appendChild(modal);
-    document.getElementById('modalConfirmBtn').addEventListener('click', function() { if(onConfirm) onConfirm(); modal.remove(); });
-}
-window.showModal = showModal;
-
-function showMessage(title, message) {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `<div class="modal-content"><h3>${title}</h3><p>${message}</p><div class="modal-actions"><button class="btn-primary" onclick="this.closest('.modal').remove()">OK</button></div></div>`;
-    document.body.appendChild(modal);
-}
-window.showMessage = showMessage;
-
-function showFilePreview(fileData, fileName, fileType) {
-    let content = '';
-    const ft = fileType ? fileType.toLowerCase() : '';
-    if (ft.startsWith('image/')) content = `<img src="${fileData}" alt="${fileName}" class="file-preview" />`;
-    else if (ft==='application/pdf') content = `<iframe src="${fileData}" class="file-preview"></iframe>`;
-    else if (ft.includes('video')) content = `<video controls class="file-preview" style="max-width:100%;"><source src="${fileData}" type="${fileType}">Your browser does not support the video tag.</video>`;
-    else if (ft.includes('audio')) content = `<audio controls style="width:100%; margin:20px 0;"><source src="${fileData}" type="${fileType}">Your browser does not support the audio tag.</audio>`;
-    else content = `<div class="file-info-preview" style="padding:20px; text-align:center;"><i class="fas ${getFileIcon(fileName)}" style="font-size:4rem; color:${getFileColor(fileName)};"></i><p style="margin-top:12px; color:#1f5175; font-weight:500;">${fileName}</p><p style="font-size:0.85rem; color:#1f5175;">Type: ${fileType || 'Unknown'}</p><p style="font-size:0.85rem; color:#1f5175;">Size: ${formatFileSize(fileData.length * 0.75)}</p><p style="margin-top:12px; color:#1f5175; font-size:0.9rem;"><i class="fas fa-info-circle"></i> Preview not available for this file type.<br>Click Download to view the file.</p></div>`;
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `<div class="modal-content"><h3><i class="fas fa-eye" style="color:#17a2b8;"></i> File Preview: ${fileName}</h3>${content}<div class="modal-actions"><button class="btn-download" onclick="downloadFileFromPreview('${fileData}','${fileName}')" style="padding:8px 20px; border-radius:20px; border:none; cursor:pointer; background:#0a4b78; color:white; font-family:'Inter',sans-serif;"><i class="fas fa-download"></i> Download</button><button class="btn-primary" onclick="this.closest('.modal').remove()">Close</button></div></div>`;
-    document.body.appendChild(modal);
-}
-window.showFilePreview = showFilePreview;
-
-function downloadFileFromPreview(fileData, fileName) { const a=document.createElement('a'); a.href=fileData; a.download=fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-window.downloadFileFromPreview = downloadFileFromPreview;
-
-// ======================== PAGE NAVIGATION ========================
-let uploadCategory = 'questionPapers';
-
-function showPage(page) {
-    const container = document.getElementById('pageContainer');
-    if (!container) return;
-    if (page === 'dashboard') { container.innerHTML = ''; return; }
-    if (page === 'approvals' && !isAdmin()) {
-        container.innerHTML = '<div class="page-container"><p style="color:#dc3545; text-align:center; padding:40px;"><i class="fas fa-lock" style="font-size:2rem; display:block; margin-bottom:12px;"></i>Access Denied. Only Admin can access approvals.</p></div>';
-        return;
-    }
-    if (page === 'monitoring' && !isAdminOrFaculty()) {
-        container.innerHTML = '<div class="page-container"><p style="color:#dc3545; text-align:center; padding:40px;"><i class="fas fa-lock" style="font-size:2rem; display:block; margin-bottom:12px;"></i>Access Denied. Only Admin and Faculty can access monitoring.</p></div>';
-        return;
-    }
-    switch(page) {
-        case 'questionPapers': renderQuestionPapers(container); break;
-        case 'subjectMaterials': renderSubjectMaterials(container); break;
-        case 'upload': renderUploadPage(container); break;
-        case 'search': renderSearchPage(container); break;
-        case 'myUploads': renderMyUploads(container); break;
-        case 'approvals': renderApprovalsPage(container); break;
-        case 'monitoring': renderMonitoringPage(container); break;
-        case 'profile': renderProfilePage(container); break;
-        case 'department': renderDepartmentPage(container); break;
-        default: container.innerHTML = '<p>Page not found</p>';
-    }
-}
-window.showPage = showPage;
 
 // ======================== RENDER FUNCTIONS ========================
 function renderDepartmentPage(container) {
@@ -1343,12 +1286,11 @@ function renderDepartmentPage(container) {
             </div>
         </div>`;
 }
-window.renderDepartmentPage = renderDepartmentPage;
 
 function renderProfilePage(container) {
     const user = registeredUsers[currentUsername];
     const storedName = getStoredUserName(currentUsername);
-    const email = getUserEmail(currentUsername);
+    const email = appData.userEmails[currentUsername] || '';
     const registeredDate = user ? formatDateShort(user.registeredAt) : 'N/A';
     container.innerHTML = `
         <div class="page-container">
@@ -1389,26 +1331,24 @@ function renderProfilePage(container) {
             </div>
         </div>`;
 }
-window.renderProfilePage = renderProfilePage;
 
 function saveNameProfile() {
     const input = document.getElementById('profileNameInput');
     if (!input) return;
     const name = input.value.trim();
     const statusDiv = document.getElementById('nameStatus');
-    if (!name) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your name.</div>`; return; }
+    if (!name) {
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your name.</div>`;
+        return;
+    }
     setStoredUserName(currentUsername, name);
     const display = document.getElementById('userNameDisplay');
     if (display) display.textContent = name;
-    if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Name updated successfully!</div>`;
-    setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 5000);
+    if (statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Name updated successfully!</div>`;
+    setTimeout(() => { if (statusDiv) statusDiv.innerHTML = ''; }, 5000);
     logUserActivity(currentUsername, currentRole, 'Update Name', `Updated name to ${name}`);
-    // Sync to Firebase
-    if (window.saveUserProfile) {
-        window.saveUserProfile(currentUsername, { displayName: name });
-    }
+    if (window.saveUserProfile) window.saveUserProfile(currentUsername, { displayName: name });
 }
-window.saveNameProfile = saveNameProfile;
 
 function changePassword() {
     const currentPass = document.getElementById('currentPassword');
@@ -1416,36 +1356,51 @@ function changePassword() {
     const confirmPass = document.getElementById('confirmPassword');
     const statusDiv = document.getElementById('passwordStatus');
     if (!currentPass || !newPass || !confirmPass) return;
-    if (!currentPass.value) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your current password.</div>`; return; }
-    if (!validateUser(currentUsername, currentPass.value)) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Current password is incorrect.</div>`; return; }
-    if (!newPass.value || newPass.value.length < 6) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> New password must be at least 6 characters.</div>`; return; }
-    if (newPass.value !== confirmPass.value) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Passwords do not match.</div>`; return; }
+    if (!currentPass.value) {
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your current password.</div>`;
+        return;
+    }
+    if (!validateUser(currentUsername, currentPass.value)) {
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Current password is incorrect.</div>`;
+        return;
+    }
+    if (!newPass.value || newPass.value.length < 6) {
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> New password must be at least 6 characters.</div>`;
+        return;
+    }
+    if (newPass.value !== confirmPass.value) {
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Passwords do not match.</div>`;
+        return;
+    }
     if (updateUserPassword(currentUsername, newPass.value)) {
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Password updated successfully!</div>`;
-        currentPass.value = ''; newPass.value = ''; confirmPass.value = '';
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Password updated successfully!</div>`;
+        currentPass.value = '';
+        newPass.value = '';
+        confirmPass.value = '';
         logUserActivity(currentUsername, currentRole, 'Change Password', 'Password changed successfully');
-        setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 5000);
+        setTimeout(() => { if (statusDiv) statusDiv.innerHTML = ''; }, 5000);
         showMessage('✅ Password Updated', 'Your password has been changed successfully.');
-    } else if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error updating password.</div>`;
+    } else if (statusDiv) {
+        statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error updating password.</div>`;
+    }
 }
-window.changePassword = changePassword;
 
 function saveUserEmailProfile() {
     const emailInput = document.getElementById('profileEmailInput');
     if (!emailInput) return;
     const email = emailInput.value.trim();
     const statusDiv = document.getElementById('emailStatus');
-    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter a valid email address.</div>`; return; }
-    saveUserEmail(currentUsername, email);
-    if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Email saved successfully!</div>`;
-    setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 5000);
-    logUserActivity(currentUsername, currentRole, 'Update Email', `Updated email to ${email}`);
-    // Sync to Firebase
-    if (window.saveUserProfile) {
-        window.saveUserProfile(currentUsername, { email: email });
+    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter a valid email address.</div>`;
+        return;
     }
+    appData.userEmails[currentUsername] = email;
+    saveData(appData);
+    if (statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Email saved successfully!</div>`;
+    setTimeout(() => { if (statusDiv) statusDiv.innerHTML = ''; }, 5000);
+    logUserActivity(currentUsername, currentRole, 'Update Email', `Updated email to ${email}`);
+    if (window.saveUserProfile) window.saveUserProfile(currentUsername, { email: email });
 }
-window.saveUserEmailProfile = saveUserEmailProfile;
 
 // ======================== MONITORING ========================
 function renderMonitoringPage(container) {
@@ -1483,7 +1438,7 @@ function renderMonitoringPage(container) {
         const user = validUsers[u];
         const isAdminUser = u === '732925MDR049';
         const userName = userNames[u] || 'Not set';
-        const email = getUserEmail(u);
+        const email = appData.userEmails[u] || '';
         html += `<div class="monitoring-item"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
             <div>${isAdmin() && !isAdminUser ? `<input type="checkbox" class="user-checkbox" data-username="${u}" onchange="updateSelectedCount()" style="margin-right:8px; width:16px; height:16px;" />` : ''}
             <strong>${u}</strong> <span style="font-size:0.75rem; color:#1f5175;">${user.role}</span>
@@ -1515,7 +1470,6 @@ function renderMonitoringPage(container) {
     html += `</div></div></div>`;
     container.innerHTML = html;
 }
-window.renderMonitoringPage = renderMonitoringPage;
 
 function toggleSelectAll() {
     const checkboxes = document.querySelectorAll('.user-checkbox');
@@ -1524,14 +1478,12 @@ function toggleSelectAll() {
     checkboxes.forEach(cb => cb.checked = selectAll.checked);
     updateSelectedCount();
 }
-window.toggleSelectAll = toggleSelectAll;
 
 function updateSelectedCount() {
     const checkboxes = document.querySelectorAll('.user-checkbox:checked');
     const el = document.getElementById('selectedCount');
-    if(el) el.textContent = checkboxes.length + ' selected';
+    if (el) el.textContent = checkboxes.length + ' selected';
 }
-window.updateSelectedCount = updateSelectedCount;
 
 function deleteSelectedUsers() {
     const checkboxes = document.querySelectorAll('.user-checkbox:checked');
@@ -1541,7 +1493,6 @@ function deleteSelectedUsers() {
     const count = removeMultipleUsers(usernames);
     if (count > 0) { showMessage('Users Removed', `${count} user(s) removed.`); renderMonitoringPage(document.getElementById('pageContainer')); }
 }
-window.deleteSelectedUsers = deleteSelectedUsers;
 
 function removeUserAccount(username) {
     if (username === '732925MDR049') { alert('Cannot remove admin user'); return false; }
@@ -1557,7 +1508,6 @@ function removeUserAccount(username) {
     }
     return success;
 }
-window.removeUserAccount = removeUserAccount;
 
 // ======================== SUBJECT MANAGEMENT ========================
 function editQPSubject(cat, oldSubject) {
@@ -1574,7 +1524,6 @@ function editQPSubject(cat, oldSubject) {
         renderQuestionPapers(document.getElementById('pageContainer'));
     });
 }
-window.editQPSubject = editQPSubject;
 
 function deleteQPSubject(cat, subject) {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can delete subjects'); return; }
@@ -1589,7 +1538,6 @@ function deleteQPSubject(cat, subject) {
         renderQuestionPapers(document.getElementById('pageContainer'));
     });
 }
-window.deleteQPSubject = deleteQPSubject;
 
 function addQPSubject(cat) {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can add subjects'); return; }
@@ -1604,7 +1552,6 @@ function addQPSubject(cat) {
         renderQuestionPapers(document.getElementById('pageContainer'));
     });
 }
-window.addQPSubject = addQPSubject;
 
 function editSMSubject(oldSubject) {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can edit subjects'); return; }
@@ -1620,7 +1567,6 @@ function editSMSubject(oldSubject) {
         renderSubjectMaterials(document.getElementById('pageContainer'));
     });
 }
-window.editSMSubject = editSMSubject;
 
 function deleteSMSubject(subject) {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can delete subjects'); return; }
@@ -1635,7 +1581,6 @@ function deleteSMSubject(subject) {
         renderSubjectMaterials(document.getElementById('pageContainer'));
     });
 }
-window.deleteSMSubject = deleteSMSubject;
 
 function addSMSubject() {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can add subjects'); return; }
@@ -1650,14 +1595,15 @@ function addSMSubject() {
         renderSubjectMaterials(document.getElementById('pageContainer'));
     });
 }
-window.addSMSubject = addSMSubject;
 
 // ======================== QUESTION PAPERS ========================
 function renderQuestionPapers(container) {
-    const cats = ['cat1','cat2','cat3'], catNames = { cat1:'CAT-1', cat2:'CAT-2', cat3:'CAT-3 (Optional)' };
+    const cats = ['cat1', 'cat2', 'cat3'];
+    const catNames = { cat1: 'CAT-1', cat2: 'CAT-2', cat3: 'CAT-3 (Optional)' };
     let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-file-pdf" style="color:#0a4b78;"></i> Question Papers</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>`;
     cats.forEach(cat => {
-        const data = appData.questionPapers[cat], files = data.files || {};
+        const data = appData.questionPapers[cat];
+        const files = data.files || {};
         html += `<div style="margin:20px 0; background:rgba(255,255,255,0.2); border-radius:24px; padding:20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
                 <h3 style="color:#0a2b48;">${catNames[cat]}</h3>
@@ -1676,7 +1622,6 @@ function renderQuestionPapers(container) {
     html += `</div>`;
     container.innerHTML = html;
 }
-window.renderQuestionPapers = renderQuestionPapers;
 
 function viewQuestionPapers(cat, subject) {
     const container = document.getElementById('pageContainer');
@@ -1690,11 +1635,11 @@ function viewQuestionPapers(cat, subject) {
     html += `</div></div>`;
     container.innerHTML = html;
 }
-window.viewQuestionPapers = viewQuestionPapers;
 
 // ======================== SUBJECT MATERIALS ========================
 function renderSubjectMaterials(container) {
-    const subjects = appData.subjectMaterials.subjects, files = appData.subjectMaterials.files || {};
+    const subjects = appData.subjectMaterials.subjects;
+    const files = appData.subjectMaterials.files || {};
     let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-book-open" style="color:#0a4b78;"></i> Subject Materials</h2><div style="display:flex; gap:8px; flex-wrap:wrap;">${isAdminOrFaculty() ? `<button class="btn-success" onclick="addSMSubject()" style="padding:8px 16px;"><i class="fas fa-plus"></i> Add Subject</button>` : ''}<button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div></div><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">`;
     subjects.forEach(subject => {
         const subjectFiles = files[subject] || [];
@@ -1706,7 +1651,6 @@ function renderSubjectMaterials(container) {
     html += `</div></div>`;
     container.innerHTML = html;
 }
-window.renderSubjectMaterials = renderSubjectMaterials;
 
 function viewSubjectMaterials(subject) {
     const container = document.getElementById('pageContainer');
@@ -1720,49 +1664,81 @@ function viewSubjectMaterials(subject) {
     html += `</div></div>`;
     container.innerHTML = html;
 }
-window.viewSubjectMaterials = viewSubjectMaterials;
 
 // ======================== FILE FUNCTIONS ========================
-function previewFile(cat, subject, idx) { const file = appData.questionPapers[cat].files[subject][idx]; if(file && file.data) showFilePreview(file.data, file.name, file.type); }
-window.previewFile = previewFile;
-function previewSMFile(subject, idx) { const file = appData.subjectMaterials.files[subject][idx]; if(file && file.data) showFilePreview(file.data, file.name, file.type); }
-window.previewSMFile = previewSMFile;
-function downloadFile(cat, subject, idx) { const file = appData.questionPapers[cat].files[subject][idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); logUserActivity(currentUsername,currentRole,'Download File',`Downloaded ${file.name}`); } }
-window.downloadFile = downloadFile;
-function deleteFile(cat, subject, idx) { if(!isAdminOrFaculty()) { alert('Only admin and faculty can delete files'); return; } if(confirm('Delete this file?')) { const name = appData.questionPapers[cat].files[subject][idx].name; appData.questionPapers[cat].files[subject].splice(idx,1); saveData(appData); logUserActivity(currentUsername,currentRole,'Delete File',`Deleted ${name}`); viewQuestionPapers(cat,subject); } }
-window.deleteFile = deleteFile;
-function downloadSMFile(subject, idx) { const file = appData.subjectMaterials.files[subject][idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); logUserActivity(currentUsername,currentRole,'Download File',`Downloaded ${file.name}`); } }
-window.downloadSMFile = downloadSMFile;
-function deleteSMFile(subject, idx) { if(!isAdminOrFaculty()) { alert('Only admin and faculty can delete files'); return; } if(confirm('Delete this file?')) { const name = appData.subjectMaterials.files[subject][idx].name; appData.subjectMaterials.files[subject].splice(idx,1); saveData(appData); logUserActivity(currentUsername,currentRole,'Delete File',`Deleted ${name}`); viewSubjectMaterials(subject); } }
-window.deleteSMFile = deleteSMFile;
+function previewFile(cat, subject, idx) {
+    const file = appData.questionPapers[cat].files[subject][idx];
+    if (file && file.data) showFilePreview(file.data, file.name, file.type);
+}
+function previewSMFile(subject, idx) {
+    const file = appData.subjectMaterials.files[subject][idx];
+    if (file && file.data) showFilePreview(file.data, file.name, file.type);
+}
+function downloadFile(cat, subject, idx) {
+    const file = appData.questionPapers[cat].files[subject][idx];
+    if (file && file.data) {
+        const a = document.createElement('a');
+        a.href = file.data;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        logUserActivity(currentUsername, currentRole, 'Download File', `Downloaded ${file.name}`);
+    }
+}
+function deleteFile(cat, subject, idx) {
+    if (!isAdminOrFaculty()) { alert('Only admin and faculty can delete files'); return; }
+    if (confirm('Delete this file?')) {
+        const name = appData.questionPapers[cat].files[subject][idx].name;
+        appData.questionPapers[cat].files[subject].splice(idx, 1);
+        saveData(appData);
+        logUserActivity(currentUsername, currentRole, 'Delete File', `Deleted ${name}`);
+        viewQuestionPapers(cat, subject);
+    }
+}
+function downloadSMFile(subject, idx) {
+    const file = appData.subjectMaterials.files[subject][idx];
+    if (file && file.data) {
+        const a = document.createElement('a');
+        a.href = file.data;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        logUserActivity(currentUsername, currentRole, 'Download File', `Downloaded ${file.name}`);
+    }
+}
+function deleteSMFile(subject, idx) {
+    if (!isAdminOrFaculty()) { alert('Only admin and faculty can delete files'); return; }
+    if (confirm('Delete this file?')) {
+        const name = appData.subjectMaterials.files[subject][idx].name;
+        appData.subjectMaterials.files[subject].splice(idx, 1);
+        saveData(appData);
+        logUserActivity(currentUsername, currentRole, 'Delete File', `Deleted ${name}`);
+        viewSubjectMaterials(subject);
+    }
+}
 
-// ======================== APPROVALS - FIXED ========================
+// ======================== APPROVALS ========================
 function submitApprovalRequest(category, cat, subject, files, fileDataArray) {
-    const request = { 
-        id: generateId(), 
-        category, 
-        cat: cat || null, 
-        subject, 
-        files: fileDataArray, 
-        requestedBy: currentUsername || 'anonymous', 
-        requestedAt: Date.now(), 
-        status: 'pending',
-        type: 'file_upload'
+    const request = {
+        id: generateId(),
+        category,
+        cat: cat || null,
+        subject,
+        files: fileDataArray,
+        requestedBy: currentUsername || 'anonymous',
+        requestedAt: Date.now(),
+        status: 'pending'
     };
     if (!appData.approvalRequests) appData.approvalRequests = [];
     appData.approvalRequests.push(request);
     saveData(appData);
     updatePendingBadge();
-    logUserActivity(currentUsername,currentRole,'Submit Approval Request',`Requested upload for ${subject}`);
-    
-    // Also save to Firebase for real-time sync
-    if (window.submitPendingUpload) {
-        window.submitPendingUpload(request);
-    }
-    
+    logUserActivity(currentUsername, currentRole, 'Submit Approval Request', `Requested upload for ${subject}`);
+    if (window.submitPendingUpload) window.submitPendingUpload(request);
     showMessage('Request Submitted ✅', `Your upload request for "${subject}" has been sent to admin for approval.`);
 }
-window.submitApprovalRequest = submitApprovalRequest;
 
 function renderApprovalsPage(container) {
     const allRequests = appData.approvalRequests || [];
@@ -1778,7 +1754,6 @@ function renderApprovalsPage(container) {
         <div id="approvalContent">${allRequests.length === 0 ? '<p style="color:#1f5175; text-align:center; padding:40px;">No approval requests yet</p>' : renderApprovalList('pending')}</div></div>`;
     container.innerHTML = html;
 }
-window.renderApprovalsPage = renderApprovalsPage;
 
 function showApprovalTab(tab) {
     const content = document.getElementById('approvalContent');
@@ -1791,21 +1766,20 @@ function showApprovalTab(tab) {
     if (rejectedTab) rejectedTab.className = tab === 'rejected' ? 'btn-primary' : 'btn-outline';
     content.innerHTML = renderApprovalList(tab);
 }
-window.showApprovalTab = showApprovalTab;
 
 function renderApprovalList(status) {
     const requests = (appData.approvalRequests || []).filter(r => r.status === status);
     if (requests.length === 0) return `<p style="color:#1f5175; text-align:center; padding:20px;">No ${status} requests</p>`;
     return requests.map(req => {
-        const totalSize = req.files ? req.files.reduce((s,f) => s + (f.size || 0), 0) : 0;
-        const fileNames = req.files ? req.files.map(f => f.name).join(', ') : 'No files';
+        const totalSize = req.files.reduce((s, f) => s + f.size, 0);
+        const fileNames = req.files.map(f => f.name).join(', ');
         const requestedBy = req.requestedBy;
-        const email = getUserEmail(requestedBy);
+        const email = appData.userEmails[requestedBy] || '';
         const userName = getStoredUserName(requestedBy) || 'Not set';
         return `<div class="approval-request ${status}">
             <div class="request-info"><div class="request-title"><i class="fas fa-file-alt" style="color:#0a4b78;"></i> ${req.category} — ${req.subject} ${req.cat ? `· ${req.cat.toUpperCase()}` : ''}</div>
             <div class="request-meta"><i class="fas fa-user" style="color:#0a4b78;"></i> ${requestedBy} ${userName!=='Not set' ? `(${userName})` : ''} ${email ? `<i class="fas fa-envelope" style="color:#0a4b78; margin-left:8px;"></i> ${email}` : ''}<br><i class="fas fa-clock" style="color:#0a4b78;"></i> ${formatDateTime(req.requestedAt)}</div></div>
-            <div class="request-details"><div><i class="fas fa-file"></i> <strong>Files:</strong> ${fileNames}</div><div style="margin-top:4px;"><i class="fas fa-weight-hanging"></i> <strong>Total Size:</strong> ${formatFileSize(totalSize)} · ${req.files ? req.files.length : 0} file(s)</div>${email ? `<div style="margin-top:4px;"><i class="fas fa-envelope"></i> <strong>Email:</strong> ${email}</div>` : `<div style="margin-top:4px; color:#dc3545;"><i class="fas fa-exclamation-triangle"></i> No email set</div>`}</div>
+            <div class="request-details"><div><i class="fas fa-file"></i> <strong>Files:</strong> ${fileNames}</div><div style="margin-top:4px;"><i class="fas fa-weight-hanging"></i> <strong>Total Size:</strong> ${formatFileSize(totalSize)} · ${req.files.length} file(s)</div>${email ? `<div style="margin-top:4px;"><i class="fas fa-envelope"></i> <strong>Email:</strong> ${email}</div>` : `<div style="margin-top:4px; color:#dc3545;"><i class="fas fa-exclamation-triangle"></i> No email set</div>`}</div>
             ${status === 'pending' && isAdmin() ? `<div class="request-actions"><button class="btn-preview-request" onclick="previewRequestFile('${req.id}',0)"><i class="fas fa-eye"></i> Preview</button><button class="btn-approve" onclick="approveRequest('${req.id}')"><i class="fas fa-check"></i> Approve</button><button class="btn-reject" onclick="rejectRequest('${req.id}')"><i class="fas fa-times"></i> Reject</button></div>` : ''}
             ${status === 'pending' ? `<div style="margin-top:12px;"><span class="pending-badge">⏳ Pending</span></div>` : ''}
             ${status === 'approved' ? `<div style="margin-top:12px;"><span class="status-badge approved-badge">✅ Approved</span></div>` : ''}
@@ -1813,7 +1787,6 @@ function renderApprovalList(status) {
         </div>`;
     }).join('');
 }
-window.renderApprovalList = renderApprovalList;
 
 function previewRequestFile(requestId, fileIndex) {
     const request = (appData.approvalRequests || []).find(r => r.id === requestId);
@@ -1828,7 +1801,6 @@ function previewRequestFile(requestId, fileIndex) {
         showMessage('Error', 'File preview not available');
     }
 }
-window.previewRequestFile = previewRequestFile;
 
 function approveRequest(requestId) {
     const request = (appData.approvalRequests || []).find(r => r.id === requestId);
@@ -1837,14 +1809,29 @@ function approveRequest(requestId) {
     try {
         request.status = 'approved';
         if (request.category === 'Question Papers') {
-            const cat = request.cat, subject = request.subject;
+            const cat = request.cat,
+                subject = request.subject;
             if (!cat || !appData.questionPapers[cat]) throw new Error('Invalid category');
             if (!appData.questionPapers[cat].files[subject]) appData.questionPapers[cat].files[subject] = [];
             if (request.files) {
                 request.files.forEach(file => {
-                    const fileData = { id: generateId(), name: file.name, size: file.size || 0, type: file.type || 'application/pdf', data: file.data || file.fileUrl, uploadedAt: Date.now(), uploadedBy: request.requestedBy };
+                    const fileData = {
+                        id: generateId(),
+                        name: file.name,
+                        size: file.size || 0,
+                        type: file.type || 'application/pdf',
+                        data: file.data || file.fileUrl,
+                        uploadedAt: Date.now(),
+                        uploadedBy: request.requestedBy
+                    };
                     appData.questionPapers[cat].files[subject].push(fileData);
-                    appData.uploadHistory.push({ fileName: file.name, category: 'Question Papers', subject, uploadedAt: Date.now(), uploadedBy: request.requestedBy });
+                    appData.uploadHistory.push({
+                        fileName: file.name,
+                        category: 'Question Papers',
+                        subject,
+                        uploadedAt: Date.now(),
+                        uploadedBy: request.requestedBy
+                    });
                 });
             }
         } else if (request.category === 'Subject Materials') {
@@ -1852,29 +1839,40 @@ function approveRequest(requestId) {
             if (!appData.subjectMaterials.files[subject]) appData.subjectMaterials.files[subject] = [];
             if (request.files) {
                 request.files.forEach(file => {
-                    const fileData = { id: generateId(), name: file.name, size: file.size || 0, type: file.type || 'application/pdf', data: file.data || file.fileUrl, uploadedAt: Date.now(), uploadedBy: request.requestedBy };
+                    const fileData = {
+                        id: generateId(),
+                        name: file.name,
+                        size: file.size || 0,
+                        type: file.type || 'application/pdf',
+                        data: file.data || file.fileUrl,
+                        uploadedAt: Date.now(),
+                        uploadedBy: request.requestedBy
+                    };
                     appData.subjectMaterials.files[subject].push(fileData);
-                    appData.uploadHistory.push({ fileName: file.name, category: 'Subject Materials', subject, uploadedAt: Date.now(), uploadedBy: request.requestedBy });
+                    appData.uploadHistory.push({
+                        fileName: file.name,
+                        category: 'Subject Materials',
+                        subject,
+                        uploadedAt: Date.now(),
+                        uploadedBy: request.requestedBy
+                    });
                 });
             }
         } else throw new Error('Unknown category');
         if (!appData.approvedRequests) appData.approvedRequests = [];
         appData.approvedRequests.push(request);
-        // Remove from pending
         const idx = appData.approvalRequests.indexOf(request);
         if (idx !== -1) appData.approvalRequests.splice(idx, 1);
         saveData(appData);
         updatePendingBadge();
-        logUserActivity(currentUsername,currentRole,'Approve Request',`Approved ${request.subject}`);
+        logUserActivity(currentUsername, currentRole, 'Approve Request', `Approved ${request.subject}`);
+        if (window.approvePendingUpload) window.approvePendingUpload(request.id, request);
         showMessage('✅ Approved', `Request for "${request.subject}" approved.`);
-        // Also sync to Firebase
-        if (window.approveUpload) {
-            window.approveUpload(request.id, request);
-        }
         renderApprovalsPage(document.getElementById('pageContainer'));
-    } catch(e) { showMessage('Error', 'Failed to approve: ' + e.message); }
+    } catch (e) {
+        showMessage('Error', 'Failed to approve: ' + e.message);
+    }
 }
-window.approveRequest = approveRequest;
 
 function rejectRequest(requestId) {
     const request = (appData.approvalRequests || []).find(r => r.id === requestId);
@@ -1882,28 +1880,37 @@ function rejectRequest(requestId) {
     if (!confirm(`Reject upload request for "${request.subject}"?`)) return;
     try {
         request.status = 'rejected';
-        // Remove from pending
         const idx = appData.approvalRequests.indexOf(request);
         if (idx !== -1) appData.approvalRequests.splice(idx, 1);
         saveData(appData);
         updatePendingBadge();
-        logUserActivity(currentUsername,currentRole,'Reject Request',`Rejected ${request.subject}`);
+        logUserActivity(currentUsername, currentRole, 'Reject Request', `Rejected ${request.subject}`);
+        if (window.rejectPendingUpload) window.rejectPendingUpload(request.id, request);
         showMessage('❌ Rejected', `Request for "${request.subject}" rejected.`);
-        // Also sync to Firebase
-        if (window.rejectUpload) {
-            window.rejectUpload(request.id, request);
-        }
         renderApprovalsPage(document.getElementById('pageContainer'));
-    } catch(e) { showMessage('Error', 'Failed to reject: ' + e.message); }
+    } catch (e) {
+        showMessage('Error', 'Failed to reject: ' + e.message);
+    }
 }
-window.rejectRequest = rejectRequest;
 
-// ======================== UPLOAD - WITH APPROVAL WORKFLOW ========================
+function updatePendingBadge() {
+    const pending = (appData.approvalRequests || []).filter(r => r.status === 'pending').length;
+    const badge = document.getElementById('pendingCount');
+    if (badge) {
+        if (pending > 0 && isAdmin()) {
+            badge.style.display = 'flex';
+            badge.textContent = pending;
+        } else badge.style.display = 'none';
+    }
+}
+
+// ======================== UPLOAD ========================
 function renderUploadPage(container) {
-    const cats = ['cat1','cat2','cat3'], catNames = { cat1:'CAT-1', cat2:'CAT-2', cat3:'CAT-3 (Optional)' };
+    const cats = ['cat1', 'cat2', 'cat3'];
+    const catNames = { cat1: 'CAT-1', cat2: 'CAT-2', cat3: 'CAT-3 (Optional)' };
     let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-cloud-upload-alt" style="color:#0a4b78;"></i> Upload Files</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
         <div style="margin-bottom:16px; padding:12px; background:rgba(255,193,7,0.15); border-radius:12px; border-left:4px solid #ffc107;">
-            <p style="color:#856404; font-size:0.9rem;"><i class="fas fa-info-circle"></i> <strong>Upload Process:</strong> Your files will be sent to Admin for approval before being published. You will receive a notification once approved or rejected.</p>
+            <p style="color:#856404; font-size:0.9rem;"><i class="fas fa-info-circle"></i> <strong>${isAdmin() ? 'Admin Upload:' : 'Upload Process:'}</strong> ${isAdmin() ? 'Files are published immediately.' : 'Files require admin approval before publishing.'}</p>
         </div>
         <div style="display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
             <button class="${uploadCategory === 'questionPapers' ? 'btn-primary' : 'btn-outline'}" onclick="setUploadCategory('questionPapers')"><i class="fas fa-file-pdf"></i> Question Papers</button>
@@ -1914,11 +1921,11 @@ function renderUploadPage(container) {
         html += `<div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Category:</label><select class="subject-select" id="uploadCatSelect" onchange="updateUploadCat()">${cats.map(c => `<option value="${c}">${catNames[c]}</option>`).join('')}</select></div>
             <div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Subject:</label><select class="subject-select" id="uploadSubjectSelect">${appData.questionPapers.cat1.subjects.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>
             <p style="color:#1f5175; font-size:0.85rem;"><i class="fas fa-info-circle"></i> Images & PDFs accepted.</p>
-            <p style="color:#0a4b78; font-size:0.8rem; margin-top:4px;"><i class="fas fa-clock"></i> Files require admin approval before publishing.</p>`;
+            <p style="color:#0a4b78; font-size:0.8rem; margin-top:4px;"><i class="fas fa-database"></i> Files will be saved to Firebase + Supabase</p>`;
     } else {
         html += `<div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Subject:</label><select class="subject-select" id="uploadSMSubjectSelect">${appData.subjectMaterials.subjects.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>
             <p style="color:#1f5175; font-size:0.85rem;"><i class="fas fa-info-circle"></i> PDF and documents accepted.</p>
-            <p style="color:#0a4b78; font-size:0.8rem; margin-top:4px;"><i class="fas fa-clock"></i> Files require admin approval before publishing.</p>`;
+            <p style="color:#0a4b78; font-size:0.8rem; margin-top:4px;"><i class="fas fa-database"></i> Files will be saved to Firebase + Supabase</p>`;
     }
     html += `</div>
         <div class="file-upload-area" id="dropZone"><i class="fas fa-cloud-upload-alt" style="font-size:3rem; color:#0a4b78;"></i><p style="margin:12px 0; color:#1f5175;">📁 Drag & drop or click to browse</p><input type="file" id="fileInput" multiple style="display:none;" /><button class="btn-primary" onclick="document.getElementById('fileInput').click()"><i class="fas fa-folder-open"></i> Browse Files</button></div>
@@ -1926,34 +1933,36 @@ function renderUploadPage(container) {
         <div id="uploadProgress" style="display:none; margin-top:12px;"><div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#1f5175;"><span id="uploadFileName">Preparing...</span><span id="progressText">0%</span></div><div class="upload-progress"><div class="upload-progress-bar" id="progressBar" style="width:0%;"></div></div></div>
         <div id="uploadQueueContainer" style="margin-top:12px;"><div id="uploadQueueInfo" style="display:none;"><p style="font-size:0.85rem; color:#1f5175; margin-bottom:8px;"><i class="fas fa-list"></i> <span id="queueCount">0</span> files in queue</p><div id="queueItems"></div></div></div></div>`;
     container.innerHTML = html;
-    
+
     const fileInput = document.getElementById('fileInput');
     if (fileInput) {
         fileInput.removeEventListener('change', handleFileUpload);
         fileInput.addEventListener('change', handleFileUpload);
     }
-    
+
     const dz = document.getElementById('dropZone');
     if (dz) {
-        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragover', e => { e.preventDefault();
+            dz.classList.add('dragover'); });
         dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-        dz.addEventListener('drop', e => { 
-            e.preventDefault(); 
-            dz.classList.remove('dragover'); 
-            if(e.dataTransfer.files.length > 0) { 
+        dz.addEventListener('drop', e => {
+            e.preventDefault();
+            dz.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
                 const fileInput = document.getElementById('fileInput');
                 if (fileInput) {
                     fileInput.files = e.dataTransfer.files;
                     fileInput.dispatchEvent(new Event('change'));
                 }
-            } 
+            }
         });
     }
 }
-window.renderUploadPage = renderUploadPage;
 
-function setUploadCategory(category) { uploadCategory = category; renderUploadPage(document.getElementById('pageContainer')); }
-window.setUploadCategory = setUploadCategory;
+function setUploadCategory(category) {
+    uploadCategory = category;
+    renderUploadPage(document.getElementById('pageContainer'));
+}
 
 function updateUploadCat() {
     const cat = document.getElementById('uploadCatSelect');
@@ -1962,15 +1971,12 @@ function updateUploadCat() {
     const value = cat.value;
     sel.innerHTML = appData.questionPapers[value].subjects.map(s => `<option value="${s}">${s}</option>`).join('');
 }
-window.updateUploadCat = updateUploadCat;
 
-// ============================================================
-// MAIN UPLOAD HANDLER - SUBMITS FOR APPROVAL
-// ============================================================
-function handleFileUpload(event) {
+// ======================== MAIN UPLOAD HANDLER ========================
+async function handleFileUpload(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
-    
+
     let subject = '';
     if (uploadCategory === 'questionPapers') {
         const subjectSelect = document.getElementById('uploadSubjectSelect');
@@ -1979,29 +1985,23 @@ function handleFileUpload(event) {
         const subjectSelect = document.getElementById('uploadSMSubjectSelect');
         if (subjectSelect) subject = subjectSelect.value;
     }
-    
+
     if (!subject) {
         const statusDiv = document.getElementById('uploadStatus');
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please select a subject first.</div>`;
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please select a subject first.</div>`;
         return;
     }
-    
-    // Check if Supabase is ready
+
     if (!window.supabaseClient) {
         const statusDiv = document.getElementById('uploadStatus');
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Supabase not initialized. Please refresh.</div>`;
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Supabase not initialized. Please refresh.</div>`;
         return;
     }
-    
-    // Start the upload process - sends to approval
-    uploadFilesForApproval(files, subject);
+
+    await uploadFilesForApproval(files, subject);
     event.target.value = '';
 }
-window.handleFileUpload = handleFileUpload;
 
-// ============================================================
-// UPLOAD FILES FOR APPROVAL - FIXED WORKFLOW
-// ============================================================
 async function uploadFilesForApproval(files, subject) {
     const statusDiv = document.getElementById('uploadStatus');
     const progressDiv = document.getElementById('uploadProgress');
@@ -2010,11 +2010,10 @@ async function uploadFilesForApproval(files, subject) {
     const fileNameDisplay = document.getElementById('uploadFileName');
 
     if (!files || files.length === 0) {
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> No files selected.</div>`;
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> No files selected.</div>`;
         return;
     }
 
-    // Validate file types - accept PDF and images
     let validFiles = [];
     for (let f of files) {
         if (f.type === 'application/pdf' || f.type.startsWith('image/')) {
@@ -2023,91 +2022,111 @@ async function uploadFilesForApproval(files, subject) {
     }
 
     if (validFiles.length === 0) {
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> No valid files. Only PDF and images allowed.</div>`;
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-info-circle"></i> No valid files. Only PDF and images allowed.</div>`;
         return;
     }
 
-    // Show progress
-    if(progressDiv) progressDiv.style.display = 'block';
-    if(progressBar) progressBar.style.width = '0%';
-    if(progressText) progressText.textContent = '0%';
-    if(fileNameDisplay) fileNameDisplay.textContent = `Uploading for approval...`;
+    if (progressDiv) progressDiv.style.display = 'block';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressText) progressText.textContent = '0%';
+    if (fileNameDisplay) fileNameDisplay.textContent = `Uploading for approval...`;
 
     let completed = 0;
     const total = validFiles.length;
     let successCount = 0;
-    let failCount = 0;
     const uploadedFiles = [];
 
     for (let index = 0; index < validFiles.length; index++) {
         const file = validFiles[index];
-        
+
         try {
-            if(fileNameDisplay) fileNameDisplay.textContent = `Uploading ${file.name} (${index + 1}/${total})...`;
-            
+            if (fileNameDisplay) fileNameDisplay.textContent = `Uploading ${file.name} (${index + 1}/${total})...`;
+
             // Upload to Supabase Storage
-            const filePath = `pending/${Date.now()}_${file.name}`;
-            const { data: uploadData, error: uploadError } = await window.supabaseClient
-                .storage
-                .from('pdf-files')
-                .upload(filePath, file, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
+            const result = await window.uploadFileToSupabase(file);
+            if (!result.success) throw new Error(result.error);
 
-            if (uploadError) {
-                console.error('Storage upload error:', uploadError);
-                throw new Error('Storage upload failed: ' + (uploadError.message || 'Unknown error'));
-            }
-
-            console.log('✅ File uploaded to storage:', filePath);
-
-            // Get public URL
-            const { data: urlData } = window.supabaseClient
-                .storage
-                .from('pdf-files')
-                .getPublicUrl(filePath);
-
-            const publicUrl = urlData.publicUrl;
-
-            // Add to uploaded files list
             uploadedFiles.push({
                 name: file.name,
                 size: file.size,
                 type: file.type,
-                data: publicUrl,
-                storagePath: filePath
+                data: result.url,
+                storagePath: result.path
             });
 
             successCount++;
             console.log('✅ Uploaded for approval:', file.name);
 
         } catch (error) {
-            failCount++;
             console.error('❌ Upload failed for', file.name, ':', error.message);
+            if (statusDiv) {
+                statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error uploading ${file.name}: ${error.message}</div>`;
+            }
         }
 
         completed++;
         const progress = Math.round((completed / total) * 100);
-        if(progressBar) progressBar.style.width = progress + '%';
-        if(progressText) progressText.textContent = progress + '%';
+        if (progressBar) progressBar.style.width = progress + '%';
+        if (progressText) progressText.textContent = progress + '%';
     }
 
-    // After all files are uploaded, submit approval request
     if (successCount > 0) {
-        const categoryName = uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials';
-        const catValue = uploadCategory === 'questionPapers' ? document.getElementById('uploadCatSelect')?.value : null;
-        
-        submitApprovalRequest(categoryName, catValue, subject, null, uploadedFiles);
-        
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-clock"></i> ${successCount} file(s) submitted for admin approval. You will be notified when approved.</div>`;
+        if (isAdmin()) {
+            // Admin uploads directly
+            const category = uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials';
+            const catValue = uploadCategory === 'questionPapers' ? document.getElementById('uploadCatSelect')?.value : null;
+            const target = uploadCategory === 'questionPapers' ? appData.questionPapers[catValue] : appData.subjectMaterials;
+            if (!target.files[subject]) target.files[subject] = [];
+            uploadedFiles.forEach(file => {
+                target.files[subject].push({
+                    id: generateId(),
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    data: file.data,
+                    uploadedAt: Date.now(),
+                    uploadedBy: currentUsername || 'anonymous'
+                });
+                appData.uploadHistory.push({
+                    fileName: file.name,
+                    category: category,
+                    subject: subject,
+                    uploadedAt: Date.now(),
+                    uploadedBy: currentUsername || 'anonymous'
+                });
+            });
+            saveData(appData);
+            if (statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> ${successCount} file(s) uploaded successfully!</div>`;
+        } else {
+            // Non-admin: submit for approval
+            const categoryName = uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials';
+            const catValue = uploadCategory === 'questionPapers' ? document.getElementById('uploadCatSelect')?.value : null;
+            submitApprovalRequest(categoryName, catValue, subject, null, uploadedFiles);
+            if (statusDiv) statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-clock"></i> ${successCount} file(s) submitted for admin approval.</div>`;
+        }
     } else {
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> Upload failed. Please try again.</div>`;
+        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> Upload failed. Please try again.</div>`;
     }
 
-    if(progressDiv) progressDiv.style.display = 'none';
+    if (progressDiv) progressDiv.style.display = 'none';
+    updateCounts();
+    updatePendingBadge();
 }
-window.uploadFilesForApproval = uploadFilesForApproval;
+
+function updateCounts() {
+    let qp = 0,
+        sm = 0;
+    for (let cat in appData.questionPapers) {
+        const files = appData.questionPapers[cat].files || {};
+        for (let s in files) qp += files[s].length;
+    }
+    const smFiles = appData.subjectMaterials.files || {};
+    for (let s in smFiles) sm += smFiles[s].length;
+    const qpEl = document.getElementById('qpCount');
+    const smEl = document.getElementById('smCount');
+    if (qpEl) qpEl.textContent = qp + ' files';
+    if (smEl) smEl.textContent = sm + ' files';
+}
 
 // ======================== SEARCH ========================
 function renderSearchPage(container) {
@@ -2115,7 +2134,6 @@ function renderSearchPage(container) {
         <div style="display:flex; gap:12px; margin-bottom:20px;"><input type="text" id="searchInput" class="login-input" placeholder="Search by filename or subject..." style="flex:1;" /><button class="btn-primary" onclick="performSearch()"><i class="fas fa-search"></i> Search</button></div>
         <div id="searchResults"></div></div>`;
 }
-window.renderSearchPage = renderSearchPage;
 
 function performSearch() {
     const searchInput = document.getElementById('searchInput');
@@ -2127,10 +2145,18 @@ function performSearch() {
     let results = [];
     for (let cat in appData.questionPapers) {
         const files = appData.questionPapers[cat].files || {};
-        for (let subject in files) files[subject].forEach(file => { if (file.name.toLowerCase().includes(query) || subject.toLowerCase().includes(query)) results.push({ name: file.name, subject, category: `Question Papers (${cat.toUpperCase()})`, size: file.size, uploadedAt: file.uploadedAt, data: file.data, type: file.type }); });
+        for (let subject in files) files[subject].forEach(file => {
+            if (file.name.toLowerCase().includes(query) || subject.toLowerCase().includes(query)) {
+                results.push({ name: file.name, subject, category: `Question Papers (${cat.toUpperCase()})`, size: file.size, uploadedAt: file.uploadedAt, data: file.data, type: file.type });
+            }
+        });
     }
     const smFiles = appData.subjectMaterials.files || {};
-    for (let subject in smFiles) smFiles[subject].forEach(file => { if (file.name.toLowerCase().includes(query) || subject.toLowerCase().includes(query)) results.push({ name: file.name, subject, category: 'Subject Materials', size: file.size, uploadedAt: file.uploadedAt, data: file.data, type: file.type }); });
+    for (let subject in smFiles) smFiles[subject].forEach(file => {
+        if (file.name.toLowerCase().includes(query) || subject.toLowerCase().includes(query)) {
+            results.push({ name: file.name, subject, category: 'Subject Materials', size: file.size, uploadedAt: file.uploadedAt, data: file.data, type: file.type });
+        }
+    });
     if (results.length === 0) { resultsDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:20px;">No results found</p>'; return; }
     resultsDiv.innerHTML = `<div style="background:rgba(255,255,255,0.2); border-radius:24px; padding:16px;"><h4 style="color:#0a2b48; margin-bottom:12px;">Found ${results.length} results</h4>${results.map((file, idx) => `
         <div class="file-item"><div class="file-info"><i class="fas ${getFileIcon(file.name)}" style="color:${getFileColor(file.name)};"></i><div><div style="font-weight:500;">${file.name}</div><div style="font-size:0.75rem; color:#1f5175;">${file.category} · ${file.subject} · ${formatFileSize(file.size)}</div></div></div>
@@ -2138,23 +2164,37 @@ function performSearch() {
     `).join('')}</div>`;
     window._searchResults = results;
 }
-window.performSearch = performSearch;
 
-function previewSearchResult(idx) { const file = window._searchResults[idx]; if(file && file.data) showFilePreview(file.data, file.name, file.type); }
-window.previewSearchResult = previewSearchResult;
-function downloadSearchResult(idx) { const file = window._searchResults[idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); } }
-window.downloadSearchResult = downloadSearchResult;
+function previewSearchResult(idx) {
+    const file = window._searchResults[idx];
+    if (file && file.data) showFilePreview(file.data, file.name, file.type);
+}
+function downloadSearchResult(idx) {
+    const file = window._searchResults[idx];
+    if (file && file.data) {
+        const a = document.createElement('a');
+        a.href = file.data;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+}
 
 // ======================== MY UPLOADS ========================
 function renderMyUploads(container) {
     const userUploads = [];
     for (let cat in appData.questionPapers) {
         const files = appData.questionPapers[cat].files || {};
-        for (let subject in files) files[subject].forEach(file => { if (file.uploadedBy === currentUsername) userUploads.push({ fileName: file.name, category: 'Question Papers', subject, uploadedAt: file.uploadedAt, data: file.data, type: file.type }); });
+        for (let subject in files) files[subject].forEach(file => {
+            if (file.uploadedBy === currentUsername) userUploads.push({ fileName: file.name, category: 'Question Papers', subject, uploadedAt: file.uploadedAt, data: file.data, type: file.type });
+        });
     }
     const smFiles = appData.subjectMaterials.files || {};
-    for (let subject in smFiles) smFiles[subject].forEach(file => { if (file.uploadedBy === currentUsername) userUploads.push({ fileName: file.name, category: 'Subject Materials', subject, uploadedAt: file.uploadedAt, data: file.data, type: file.type }); });
-    userUploads.sort((a,b) => b.uploadedAt - a.uploadedAt);
+    for (let subject in smFiles) smFiles[subject].forEach(file => {
+        if (file.uploadedBy === currentUsername) userUploads.push({ fileName: file.name, category: 'Subject Materials', subject, uploadedAt: file.uploadedAt, data: file.data, type: file.type });
+    });
+    userUploads.sort((a, b) => b.uploadedAt - a.uploadedAt);
     let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-history" style="color:#0a4b78;"></i> My Uploads</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>`;
     if (userUploads.length === 0) html += `<p style="color:#1f5175; text-align:center; padding:40px;">📭 No uploads found for ${currentUsername}</p>`;
     else {
@@ -2167,12 +2207,79 @@ function renderMyUploads(container) {
     container.innerHTML = html;
     window._userUploads = userUploads;
 }
-window.renderMyUploads = renderMyUploads;
 
-function previewMyUpload(idx) { const file = window._userUploads[idx]; if(file && file.data) showFilePreview(file.data, file.fileName, file.type); }
-window.previewMyUpload = previewMyUpload;
-function downloadMyUpload(idx) { const file = window._userUploads[idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); } }
-window.downloadMyUpload = downloadMyUpload;
+function previewMyUpload(idx) {
+    const file = window._userUploads[idx];
+    if (file && file.data) showFilePreview(file.data, file.fileName, file.type);
+}
+function downloadMyUpload(idx) {
+    const file = window._userUploads[idx];
+    if (file && file.data) {
+        const a = document.createElement('a');
+        a.href = file.data;
+        a.download = file.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+}
+
+// ======================== USER MANAGEMENT ========================
+function registerUser(username, password, role) {
+    if (registeredUsers[username]) return false;
+    registeredUsers[username] = { password, role, registeredAt: Date.now() };
+    saveUsers(registeredUsers);
+    return true;
+}
+
+function validateUser(username, password) {
+    if (registeredUsers[username]) return registeredUsers[username].password === password;
+    return false;
+}
+
+function updateUserPassword(username, newPassword) {
+    if (registeredUsers[username]) {
+        registeredUsers[username].password = newPassword;
+        saveUsers(registeredUsers);
+        return true;
+    }
+    return false;
+}
+
+function removeUser(username) {
+    if (username === '732925MDR049') { alert('Cannot remove admin user'); return false; }
+    if (registeredUsers[username]) {
+        delete registeredUsers[username];
+        saveUsers(registeredUsers);
+        return true;
+    }
+    return false;
+}
+
+function removeMultipleUsers(usernames) {
+    let count = 0;
+    usernames.forEach(u => {
+        if (u !== '732925MDR049' && registeredUsers[u]) {
+            delete registeredUsers[u];
+            count++;
+        }
+    });
+    if (count > 0) saveUsers(registeredUsers);
+    return count;
+}
+
+function logUserActivity(username, role, action, details) {
+    appData.userActivity.push({ username, role, action, details, timestamp: Date.now() });
+    if (appData.userActivity.length > 500) appData.userActivity = appData.userActivity.slice(-500);
+    saveData(appData);
+}
+
+function logUserLogin(username, role) {
+    appData.userLogins.push({ username, role, timestamp: Date.now() });
+    if (appData.userLogins.length > 500) appData.userLogins = appData.userLogins.slice(-500);
+    saveData(appData);
+    logUserActivity(username, role, 'Login', 'User logged in');
+}
 
 // ======================== LOGIN ========================
 const tabBtns = document.querySelectorAll('.tab-btn');
@@ -2192,24 +2299,10 @@ document.getElementById('studentForm').addEventListener('submit', function(e) {
     if (!password || !isValidDate(password)) { alert('Invalid password. Use DD/MM/YYYY'); return; }
     if (!registeredUsers[username]) registerUser(username, password, 'student');
     else if (!validateUser(username, password)) { alert('Invalid credentials'); return; }
-    currentUsername = username; currentRole = 'student';
-    logUserLogin(username, 'student'); loadUserAvatar(username);
-    // Fetch profile from Firebase
-    if (window.getUserProfile) {
-        window.getUserProfile(username).then(profile => {
-            if (profile) {
-                currentUserProfile = profile;
-                if (profile.displayName) {
-                    setStoredUserName(username, profile.displayName);
-                    updateUserNameDisplay();
-                }
-                if (profile.avatar) {
-                    userAvatarData = { data: profile.avatar };
-                    updateAvatarDisplay();
-                }
-            }
-        });
-    }
+    currentUsername = username;
+    currentRole = 'student';
+    logUserLogin(username, 'student');
+    loadUserAvatar(username);
     showDashboard(username, 'student', username);
 });
 
@@ -2222,23 +2315,10 @@ document.getElementById('facultyForm').addEventListener('submit', function(e) {
     if (!password || !isValidDate(password)) { alert('Invalid password. Use DD/MM/YYYY'); return; }
     if (!registeredUsers[username]) registerUser(username, password, 'faculty');
     else if (!validateUser(username, password)) { alert('Invalid credentials'); return; }
-    currentUsername = username; currentRole = 'faculty';
-    logUserLogin(username, 'faculty'); loadUserAvatar(username);
-    if (window.getUserProfile) {
-        window.getUserProfile(username).then(profile => {
-            if (profile) {
-                currentUserProfile = profile;
-                if (profile.displayName) {
-                    setStoredUserName(username, profile.displayName);
-                    updateUserNameDisplay();
-                }
-                if (profile.avatar) {
-                    userAvatarData = { data: profile.avatar };
-                    updateAvatarDisplay();
-                }
-            }
-        });
-    }
+    currentUsername = username;
+    currentRole = 'faculty';
+    logUserLogin(username, 'faculty');
+    loadUserAvatar(username);
     showDashboard(username, 'faculty', username);
 });
 
@@ -2248,23 +2328,10 @@ document.getElementById('adminForm').addEventListener('submit', function(e) {
     const password = document.getElementById('adminPassword').value.trim();
     if (username === '732925MDR049' && password === 'MDR2008') {
         if (!registeredUsers[username]) registerUser(username, password, 'admin');
-        currentUsername = username; currentRole = 'admin';
-        logUserLogin(username, 'admin'); loadUserAvatar(username);
-        if (window.getUserProfile) {
-            window.getUserProfile(username).then(profile => {
-                if (profile) {
-                    currentUserProfile = profile;
-                    if (profile.displayName) {
-                        setStoredUserName(username, profile.displayName);
-                        updateUserNameDisplay();
-                    }
-                    if (profile.avatar) {
-                        userAvatarData = { data: profile.avatar };
-                        updateAvatarDisplay();
-                    }
-                }
-            });
-        }
+        currentUsername = username;
+        currentRole = 'admin';
+        logUserLogin(username, 'admin');
+        loadUserAvatar(username);
         showDashboard(username, 'admin', 'Admin');
     } else alert('Invalid admin credentials');
 });
@@ -2285,21 +2352,17 @@ function showDashboard(username, role, displayName) {
     if (existing && nameDisplay) nameDisplay.textContent = existing;
     else if (nameDisplay) {
         const name = prompt('Enter your full name:', 'John Doe');
-        if (name && name.trim()) { 
-            setStoredUserName(username, name.trim()); 
+        if (name && name.trim()) {
+            setStoredUserName(username, name.trim());
             nameDisplay.textContent = name.trim();
-            // Save to Firebase
-            if (window.saveUserProfile) {
-                window.saveUserProfile(username, { displayName: name.trim() });
-            }
-        }
-        else nameDisplay.textContent = 'Not set';
+            if (window.saveUserProfile) window.saveUserProfile(username, { displayName: name.trim() });
+        } else nameDisplay.textContent = 'Not set';
     }
+    
     // Listen to real-time profile updates
     if (window.listenToUserProfile) {
         window.listenToUserProfile(username, (profile) => {
             if (profile) {
-                currentUserProfile = profile;
                 if (profile.displayName) {
                     const nameEl = document.getElementById('userNameDisplay');
                     if (nameEl) nameEl.textContent = profile.displayName;
@@ -2312,23 +2375,56 @@ function showDashboard(username, role, displayName) {
             }
         });
     }
-    updateCounts(); updatePendingBadge();
+    
+    // Listen to files
+    if (window.listenToFiles) {
+        window.listenToFiles((data) => {
+            if (data) {
+                // Update local data
+                for (let id in data) {
+                    const file = data[id];
+                    if (file.status === 'approved') {
+                        // File is approved
+                    }
+                }
+                updateCounts();
+                refreshCurrentPage();
+            }
+        });
+    }
+    
+    // Listen to pending uploads
+    if (window.listenToPendingUploads) {
+        window.listenToPendingUploads((data) => {
+            if (data) {
+                const newRequests = Object.values(data);
+                appData.approvalRequests = newRequests;
+                updatePendingBadge();
+                const container = document.getElementById('pageContainer');
+                if (container && container.querySelector('.page-container h2')?.textContent.includes('Approval')) {
+                    renderApprovalsPage(container);
+                }
+            }
+        });
+    }
+    
+    updateCounts();
+    updatePendingBadge();
+    console.log('✅ Logged in:', username, 'as', role);
 }
-window.showDashboard = showDashboard;
 
 // ======================== INIT ========================
 document.getElementById('loginPage').classList.remove('hidden');
 document.getElementById('dashboardPage').classList.add('hidden');
-const approvalsCard = document.getElementById('approvalsCard');
-const monitoringCard = document.getElementById('monitoringCard');
-if (approvalsCard) approvalsCard.style.display = 'none';
-if (monitoringCard) monitoringCard.style.display = 'none';
-updateCounts(); updatePendingBadge();
+document.getElementById('approvalsCard').style.display = 'none';
+document.getElementById('monitoringCard').style.display = 'none';
+updateCounts();
+updatePendingBadge();
 
-console.log('✅ Medi Electro Vault - Fully Functional with Approval Workflow!');
+console.log('✅ Medi Electro Vault - Fully Functional!');
 console.log('🔥 Firebase Realtime Database: Connected');
 console.log('📊 Supabase: Connected');
-console.log('📁 Files require admin approval before publishing');
+console.log('📁 Admin uploads directly, Students/Faculty require approval');
 </script>
 </body>
 </html>
