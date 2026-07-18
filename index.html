@@ -526,15 +526,12 @@
     </div>
 </div>
 
-<!-- ============================================================ -->
-<!-- COMPLETE JAVASCRIPT - ALL FEATURES RESTORED                  -->
-<!-- ============================================================ -->
 <script type="module">
 // =============================================================
-// FIREBASE INITIALIZATION
+// FIREBASE INITIALIZATION - SINGLE INSTANCE
 // =============================================================
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get, child, onValue, off, push, update, remove } from "firebase/database";
+import { getDatabase, ref, set, get, child, onValue, off, push, update, remove, serverTimestamp } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
@@ -553,40 +550,35 @@ const db = getDatabase(firebaseApp);
 const auth = getAuth(firebaseApp);
 const storage = getStorage(firebaseApp);
 
-window.fbDb = db;
-window.fbRef = ref;
-window.fbSet = set;
-window.fbGet = get;
-window.fbOnValue = onValue;
-window.fbOff = off;
-window.fbPush = push;
-window.fbUpdate = update;
-window.fbRemove = remove;
+// Firebase Helpers - Single source of truth
+const fb = {
+    db, auth, storage,
+    ref, set, get, child, onValue, off, push, update, remove, serverTimestamp
+};
 
+window.FB = fb;
 console.log('🔥 Firebase initialized');
 
 // =============================================================
-// SUPABASE INITIALIZATION
+// SUPABASE INITIALIZATION - SINGLE INSTANCE
 // =============================================================
 const SUPABASE_URL = 'https://apxinpazvkvgujcvruod.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_H80DlYfDoXxNycQtz-Z0TA_nV06-Orj';
 
-let supabaseClient = null;
-let supabaseReady = false;
+let supabase = null;
 
 function initSupabase() {
     try {
-        if (typeof supabase === 'undefined') {
+        if (typeof window.supabase === 'undefined') {
             console.error('❌ Supabase CDN not loaded');
             return null;
         }
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
             auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
         });
-        window.supabaseClient = supabaseClient;
-        supabaseReady = true;
-        console.log('✅ Supabase client initialized');
-        return supabaseClient;
+        window.SB = supabase;
+        console.log('✅ Supabase initialized');
+        return supabase;
     } catch (e) {
         console.error('❌ Supabase init error:', e.message);
         return null;
@@ -596,17 +588,16 @@ function initSupabase() {
 initSupabase();
 
 // =============================================================
-// STATUS INDICATORS
+// CONNECTION STATUS
 // =============================================================
-async function checkFirebaseStatus() {
+async function checkFirebase() {
     const el = document.getElementById('firebaseStatus');
     try {
-        await set(ref(db, 'test_connection'), { timestamp: Date.now() });
-        const snap = await get(child(ref(db), 'test_connection'));
+        await set(ref(db, '_test'), { t: Date.now() });
+        const snap = await get(child(ref(db), '_test'));
         if (snap.exists()) {
             el.innerHTML = '<i class="fas fa-check-circle"></i> Firebase ✅';
             el.className = 'status-badge connected';
-            console.log('✅ Firebase Connected');
             return true;
         }
         throw new Error('No data');
@@ -618,21 +609,20 @@ async function checkFirebaseStatus() {
     }
 }
 
-async function checkSupabaseStatus() {
+async function checkSupabase() {
     const el = document.getElementById('supabaseStatus');
     try {
-        if (!supabaseClient) throw new Error('Client not initialized');
-        const { error } = await supabaseClient.from('files').select('*', { count: 'exact', head: true });
-        if (error && error.code === '42P01') {
+        if (!supabase) throw new Error('Not initialized');
+        const { error } = await supabase.from('files').select('*', { count: 'exact', head: true });
+        if (error && (error.code === '42P01' || error.code === '42501')) {
             el.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
             el.className = 'status-badge connected';
-            console.log('✅ Supabase Connected (table missing)');
+            console.log('✅ Supabase Connected');
             return true;
         }
         if (error) throw error;
         el.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
         el.className = 'status-badge connected';
-        console.log('✅ Supabase Connected');
         return true;
     } catch (e) {
         el.innerHTML = '<i class="fas fa-times-circle"></i> Supabase Error';
@@ -643,237 +633,224 @@ async function checkSupabaseStatus() {
 }
 
 // =============================================================
-// FIREBASE REALTIME LISTENERS (SINGLE INSTANCE)
+// USER PROFILE SYSTEM - FIREBASE SOURCE OF TRUTH
 // =============================================================
-let fileListenerAttached = false;
-let profileListenerAttached = false;
+const userProfiles = {};
 
-function attachFileListener() {
-    if (fileListenerAttached) return;
-    fileListenerAttached = true;
-    const filesRef = ref(db, 'files');
-    onValue(filesRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            console.log('📡 File update received:', Object.keys(data).length, 'files');
-            updateFileCounts(data);
-            refreshCurrentPage();
-        }
-    });
-    console.log('📡 File listener attached');
-}
-
-function attachProfileListener(username) {
-    if (profileListenerAttached) return;
-    profileListenerAttached = true;
-    const profileRef = ref(db, 'users/' + username);
-    onValue(profileRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data && data.name) {
-            const display = document.getElementById('userNameDisplay');
-            if (display) display.textContent = data.name;
-            localStorage.setItem('userName_' + username, data.name);
-        }
-    });
-    console.log('📡 Profile listener attached for:', username);
-}
-
-// =============================================================
-// PROFILE MANAGEMENT
-// =============================================================
-async function getUserProfile(username) {
+async function getUserProfile(registerNumber) {
     try {
-        const snap = await get(child(ref(db), 'users/' + username));
+        const snap = await get(child(ref(db), `users/${registerNumber}`));
         if (snap.exists()) {
-            return snap.val();
+            const data = snap.val();
+            userProfiles[registerNumber] = data;
+            return data;
         }
         return null;
     } catch (e) {
-        console.error('❌ Profile fetch error:', e.message);
+        console.error('❌ Get profile error:', e.message);
         return null;
     }
 }
 
-async function saveUserProfile(username, data) {
+async function saveUserProfile(registerNumber, data) {
     try {
-        await set(ref(db, 'users/' + username), data);
-        console.log('✅ Profile saved for:', username);
+        await set(ref(db, `users/${registerNumber}`), {
+            ...data,
+            registerNumber,
+            updatedAt: Date.now()
+        });
+        userProfiles[registerNumber] = { ...data, registerNumber };
+        console.log('✅ Profile saved:', registerNumber);
         return true;
     } catch (e) {
-        console.error('❌ Profile save error:', e.message);
+        console.error('❌ Save profile error:', e.message);
         return false;
     }
 }
 
-async function saveUserName(username, name) {
-    const profile = await getUserProfile(username);
-    if (profile && profile.name) {
-        return true;
-    }
-    return await saveUserProfile(username, { name, createdAt: Date.now() });
-}
-
-// =============================================================
-// FILE MANAGEMENT
-// =============================================================
-function updateFileCounts(data) {
-    let count = 0;
-    if (data) {
-        for (let key in data) {
-            if (data[key].type === 'file') count++;
+function listenToUserProfile(registerNumber, callback) {
+    const userRef = ref(db, `users/${registerNumber}`);
+    onValue(userRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            userProfiles[registerNumber] = data;
+            if (callback) callback(data);
         }
-    }
-    const qpEl = document.getElementById('qpCount');
-    const smEl = document.getElementById('smCount');
-    if (qpEl) qpEl.textContent = count + ' files';
-    if (smEl) smEl.textContent = count + ' files';
+    }, { onlyOnce: false });
 }
 
 // =============================================================
-// UPLOAD TO SUPABASE
+// FILE SYSTEM - FIREBASE + SUPABASE
 // =============================================================
-async function uploadFileToSupabase(file, subject, uploadedBy) {
+let fileListeners = {};
+
+function listenToFiles(callback) {
+    const filesRef = ref(db, 'files');
+    onValue(filesRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            if (callback) callback(data);
+        } else {
+            if (callback) callback({});
+        }
+    });
+}
+
+function listenToPendingUploads(callback) {
+    const pendingRef = ref(db, 'pending_uploads');
+    onValue(pendingRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            if (callback) callback(data);
+        } else {
+            if (callback) callback({});
+        }
+    });
+}
+
+async function submitPendingUpload(fileData) {
     try {
-        if (!supabaseClient) throw new Error('Supabase not initialized');
-        
-        const filePath = `uploads/${Date.now()}_${file.name}`;
-        const { data: uploadData, error: uploadError } = await supabaseClient
-            .storage
-            .from('pdf-files')
-            .upload(filePath, file, { cacheControl: '3600', upsert: false });
-        
-        if (uploadError) throw new Error('Storage upload: ' + uploadError.message);
-        
-        const { data: urlData } = supabaseClient.storage.from('pdf-files').getPublicUrl(filePath);
-        const publicUrl = urlData.publicUrl;
-        
-        const fileId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-        const fileData = {
-            id: fileId,
-            fileName: file.name,
-            subject: subject,
-            uploadedBy: uploadedBy || 'anonymous',
-            uploadedAt: Date.now(),
-            fileUrl: publicUrl,
-            fileSize: file.size,
-            fileType: file.type,
-            type: 'file'
-        };
-        
-        // Save to Firebase
-        await set(ref(db, 'files/' + fileId), fileData);
-        console.log('🔥 File saved to Firebase:', file.name);
-        
-        // Save to Supabase
-        try {
-            const { error: dbError } = await supabaseClient
-                .from('files')
-                .insert([{
-                    file_name: file.name,
-                    subject: subject,
-                    uploaded_by: uploadedBy || 'anonymous',
-                    file_url: publicUrl,
-                    file_size: file.size,
-                    file_type: file.type,
-                    uploaded_at: new Date().toISOString()
-                }]);
-            if (dbError) console.warn('⚠️ Supabase DB insert warning:', dbError.message);
-        } catch (e) {
-            console.warn('⚠️ Supabase DB insert failed:', e.message);
-        }
-        
-        return { success: true, fileId, fileData, url: publicUrl };
-        
+        const id = fileData.id || Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        await set(ref(db, `pending_uploads/${id}`), {
+            ...fileData,
+            id,
+            status: 'pending',
+            submittedAt: Date.now()
+        });
+        console.log('📤 Pending upload submitted:', fileData.fileName);
+        return { success: true, id };
     } catch (e) {
-        console.error('❌ Upload error:', e.message);
+        console.error('❌ Pending upload error:', e.message);
+        return { success: false, error: e.message };
+    }
+}
+
+async function approvePendingUpload(pendingId, fileData) {
+    try {
+        // Move to files
+        await set(ref(db, `files/${pendingId}`), {
+            ...fileData,
+            status: 'approved',
+            approvedAt: Date.now()
+        });
+        // Remove from pending
+        await remove(ref(db, `pending_uploads/${pendingId}`));
+        console.log('✅ Upload approved:', fileData.fileName);
+        return { success: true };
+    } catch (e) {
+        console.error('❌ Approve error:', e.message);
+        return { success: false, error: e.message };
+    }
+}
+
+async function rejectPendingUpload(pendingId, fileData) {
+    try {
+        await remove(ref(db, `pending_uploads/${pendingId}`));
+        // Delete from storage if exists
+        if (fileData.storagePath && supabase) {
+            try {
+                await supabase.storage.from('pdf-files').remove([fileData.storagePath]);
+            } catch (e) {
+                console.warn('Storage delete warning:', e.message);
+            }
+        }
+        console.log('❌ Upload rejected:', fileData.fileName);
+        return { success: true };
+    } catch (e) {
+        console.error('❌ Reject error:', e.message);
         return { success: false, error: e.message };
     }
 }
 
 // =============================================================
-// UI FUNCTIONS - ALL RESTORED
+// UPLOAD TO SUPABASE STORAGE
 // =============================================================
-window.togglePassword = function(inputId, btn) {
+async function uploadToSupabaseStorage(file, path) {
+    try {
+        if (!supabase) throw new Error('Supabase not initialized');
+        const filePath = path || `uploads/${Date.now()}_${file.name}`;
+        const { data, error } = await supabase.storage
+            .from('pdf-files')
+            .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        if (error) throw new Error(error.message);
+        const { data: urlData } = supabase.storage.from('pdf-files').getPublicUrl(filePath);
+        return { success: true, path: filePath, url: urlData.publicUrl };
+    } catch (e) {
+        console.error('❌ Storage upload error:', e.message);
+        return { success: false, error: e.message };
+    }
+}
+
+// =============================================================
+// GLOBAL EXPOSURE
+// =============================================================
+window.getUserProfile = getUserProfile;
+window.saveUserProfile = saveUserProfile;
+window.listenToUserProfile = listenToUserProfile;
+window.listenToFiles = listenToFiles;
+window.listenToPendingUploads = listenToPendingUploads;
+window.submitPendingUpload = submitPendingUpload;
+window.approvePendingUpload = approvePendingUpload;
+window.rejectPendingUpload = rejectPendingUpload;
+window.uploadToSupabaseStorage = uploadToSupabaseStorage;
+window.checkFirebase = checkFirebase;
+window.checkSupabase = checkSupabase;
+
+// =============================================================
+// INIT
+// =============================================================
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 Initializing Medi Electro Vault');
+    await checkFirebase();
+    await checkSupabase();
+    console.log('✅ Ready');
+});
+</script>
+
+<script>
+// =============================================================
+// APPLICATION LOGIC - ALL UI FUNCTIONS
+// =============================================================
+
+// ======================== PASSWORD TOGGLE ========================
+function togglePassword(inputId, btn) {
     const input = document.getElementById(inputId);
     if (!input) return;
-    if (input.type === 'password') {
-        input.type = 'text';
-        btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
-    } else {
-        input.type = 'password';
-        btn.innerHTML = '<i class="fas fa-eye"></i>';
-    }
-};
+    if (input.type === 'password') { input.type = 'text'; btn.innerHTML = '<i class="fas fa-eye-slash"></i>'; }
+    else { input.type = 'password'; btn.innerHTML = '<i class="fas fa-eye"></i>'; }
+}
+window.togglePassword = togglePassword;
 
-window.togglePasswordField = function(inputId) {
+function togglePasswordField(inputId) {
     const input = document.getElementById(inputId);
     if (!input) return;
     const btn = input.parentElement.querySelector('.eye-btn-small');
     if (!btn) return;
-    if (input.type === 'password') {
-        input.type = 'text';
-        btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
-    } else {
-        input.type = 'password';
-        btn.innerHTML = '<i class="fas fa-eye"></i>';
-    }
-};
+    if (input.type === 'password') { input.type = 'text'; btn.innerHTML = '<i class="fas fa-eye-slash"></i>'; }
+    else { input.type = 'password'; btn.innerHTML = '<i class="fas fa-eye"></i>'; }
+}
+window.togglePasswordField = togglePasswordField;
 
-window.formatDateShort = function(timestamp) {
-    if (!timestamp) return 'N/A';
-    const date = new Date(timestamp);
-    return String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+String(date.getFullYear()).slice(-2);
-};
+// ======================== DATE HELPERS ========================
+function formatDateShort(t) { if (!t) return 'N/A'; const d = new Date(t); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getFullYear()).slice(-2); }
+function formatDateTime(t) { if (!t) return 'N/A'; const d = new Date(t); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getFullYear()).slice(-2)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); }
+function isValidDate(s) { if (!s) return false; const p = s.split('/'); if (p.length !== 3) return false; const d = parseInt(p[0]), m = parseInt(p[1]), y = parseInt(p[2]); if (isNaN(d)||isNaN(m)||isNaN(y)) return false; if (d<1||d>31||m<1||m>12||y<1900||y>2100) return false; const date = new Date(y, m-1, d); return date.getFullYear()===y && date.getMonth()===m-1 && date.getDate()===d; }
+window.formatDateShort = formatDateShort;
+window.formatDateTime = formatDateTime;
+window.isValidDate = isValidDate;
 
-window.formatDateTime = function(timestamp) {
-    if (!timestamp) return 'N/A';
-    const date = new Date(timestamp);
-    return String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+String(date.getFullYear()).slice(-2)+' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0')+':'+String(date.getSeconds()).padStart(2,'0');
-};
+// ======================== HELPERS ========================
+function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
+function formatFileSize(b) { if(b<1024) return b+' B'; if(b<1024*1024) return (b/1024).toFixed(1)+' KB'; return (b/(1024*1024)).toFixed(1)+' MB'; }
+function getFileIcon(n) { const e = n.split('.').pop().toLowerCase(); if(['jpg','jpeg','png','gif','bmp','webp','svg'].includes(e)) return 'fa-file-image'; if(['pdf'].includes(e)) return 'fa-file-pdf'; if(['doc','docx','txt','md','rtf'].includes(e)) return 'fa-file-word'; return 'fa-file'; }
+function getFileColor(n) { const e = n.split('.').pop().toLowerCase(); if(['jpg','jpeg','png','gif','bmp','webp','svg'].includes(e)) return '#e67e22'; if(['pdf'].includes(e)) return '#c0392b'; if(['doc','docx','txt','md','rtf'].includes(e)) return '#2b5797'; return '#6c757d'; }
+window.generateId = generateId;
+window.formatFileSize = formatFileSize;
+window.getFileIcon = getFileIcon;
+window.getFileColor = getFileColor;
 
-window.isValidDate = function(dateStr) {
-    if (!dateStr) return false;
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return false;
-    const day = parseInt(parts[0]), month = parseInt(parts[1]), year = parseInt(parts[2]);
-    if (isNaN(day)||isNaN(month)||isNaN(year)) return false;
-    if (day<1||day>31||month<1||month>12||year<1900||year>2100) return false;
-    const date = new Date(year, month-1, day);
-    return date.getFullYear()===year && date.getMonth()===month-1 && date.getDate()===day;
-};
-
-window.generateId = function() { return Date.now().toString(36) + Math.random().toString(36).substr(2,5); };
-
-window.formatFileSize = function(bytes) {
-    if(bytes<1024) return bytes+' B';
-    if(bytes<1024*1024) return (bytes/1024).toFixed(1)+' KB';
-    return (bytes/(1024*1024)).toFixed(1)+' MB';
-};
-
-window.getFileIcon = function(filename) {
-    const ext = filename.split('.').pop().toLowerCase();
-    if (['jpg','jpeg','png','gif','bmp','webp','svg'].includes(ext)) return 'fa-file-image';
-    if (['pdf'].includes(ext)) return 'fa-file-pdf';
-    if (['doc','docx','txt','md','rtf'].includes(ext)) return 'fa-file-word';
-    return 'fa-file';
-};
-
-window.getFileColor = function(filename) {
-    const ext = filename.split('.').pop().toLowerCase();
-    if (['jpg','jpeg','png','gif','bmp','webp','svg'].includes(ext)) return '#e67e22';
-    if (['pdf'].includes(ext)) return '#c0392b';
-    if (['doc','docx','txt','md','rtf'].includes(ext)) return '#2b5797';
-    return '#6c757d';
-};
-
-window.showMessage = function(title, message) {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `<div class="modal-content"><h3>${title}</h3><p>${message}</p><div class="modal-actions"><button class="btn-primary" onclick="this.closest('.modal').remove()">OK</button></div></div>`;
-    document.body.appendChild(modal);
-};
-
-window.showModal = function(title, content, onConfirm) {
+// ======================== MODAL ========================
+function showModal(title, content, onConfirm) {
     const existing = document.querySelector('.modal');
     if(existing) existing.remove();
     const modal = document.createElement('div');
@@ -881,79 +858,51 @@ window.showModal = function(title, content, onConfirm) {
     modal.innerHTML = `<div class="modal-content"><h3>${title}</h3>${content}<div class="modal-actions"><button class="btn-outline" onclick="this.closest('.modal').remove()">Cancel</button><button class="btn-primary" id="modalConfirmBtn">Confirm</button></div></div>`;
     document.body.appendChild(modal);
     document.getElementById('modalConfirmBtn').addEventListener('click', function() { if(onConfirm) onConfirm(); modal.remove(); });
-};
+}
+window.showModal = showModal;
 
-window.showFilePreview = function(fileData, fileName, fileType) {
+function showMessage(title, message) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `<div class="modal-content"><h3>${title}</h3><p>${message}</p><div class="modal-actions"><button class="btn-primary" onclick="this.closest('.modal').remove()">OK</button></div></div>`;
+    document.body.appendChild(modal);
+}
+window.showMessage = showMessage;
+
+function showFilePreview(fileData, fileName, fileType) {
     let content = '';
     const ft = fileType ? fileType.toLowerCase() : '';
     if (ft.startsWith('image/')) content = `<img src="${fileData}" alt="${fileName}" class="file-preview" />`;
-    else if (ft==='application/pdf') content = `<iframe src="${fileData}" class="file-preview"></iframe>`;
-    else if (ft.includes('video')) content = `<video controls class="file-preview" style="max-width:100%;"><source src="${fileData}" type="${fileType}">Your browser does not support the video tag.</video>`;
-    else if (ft.includes('audio')) content = `<audio controls style="width:100%; margin:20px 0;"><source src="${fileData}" type="${fileType}">Your browser does not support the audio tag.</audio>`;
-    else content = `<div class="file-info-preview" style="padding:20px; text-align:center;"><i class="fas ${window.getFileIcon(fileName)}" style="font-size:4rem; color:${window.getFileColor(fileName)};"></i><p style="margin-top:12px; color:#1f5175; font-weight:500;">${fileName}</p><p style="font-size:0.85rem; color:#1f5175;">Type: ${fileType || 'Unknown'}</p><p style="font-size:0.85rem; color:#1f5175;">Size: ${window.formatFileSize(fileData.length * 0.75)}</p><p style="margin-top:12px; color:#1f5175; font-size:0.9rem;"><i class="fas fa-info-circle"></i> Preview not available for this file type.<br>Click Download to view the file.</p></div>`;
+    else if (ft === 'application/pdf') content = `<iframe src="${fileData}" class="file-preview"></iframe>`;
+    else content = `<div style="padding:20px;text-align:center;"><i class="fas ${getFileIcon(fileName)}" style="font-size:4rem;color:${getFileColor(fileName)};"></i><p style="margin-top:12px;color:#1f5175;font-weight:500;">${fileName}</p><p style="font-size:0.85rem;color:#1f5175;">Preview not available. Click Download to view.</p></div>`;
     const modal = document.createElement('div');
     modal.className = 'modal';
-    modal.innerHTML = `<div class="modal-content"><h3><i class="fas fa-eye" style="color:#17a2b8;"></i> File Preview: ${fileName}</h3>${content}<div class="modal-actions"><button class="btn-download" onclick="window.downloadFileFromPreview('${fileData}','${fileName}')" style="padding:8px 20px; border-radius:20px; border:none; cursor:pointer; background:#0a4b78; color:white; font-family:'Inter',sans-serif;"><i class="fas fa-download"></i> Download</button><button class="btn-primary" onclick="this.closest('.modal').remove()">Close</button></div></div>`;
+    modal.innerHTML = `<div class="modal-content"><h3>File Preview: ${fileName}</h3>${content}<div class="modal-actions"><button class="btn-download" onclick="downloadFileFromPreview('${fileData}','${fileName}')" style="padding:8px 20px;border-radius:20px;border:none;cursor:pointer;background:#0a4b78;color:white;font-family:'Inter',sans-serif;"><i class="fas fa-download"></i> Download</button><button class="btn-primary" onclick="this.closest('.modal').remove()">Close</button></div></div>`;
     document.body.appendChild(modal);
-};
+}
+window.showFilePreview = showFilePreview;
 
-window.downloadFileFromPreview = function(fileData, fileName) { 
-    const a=document.createElement('a'); 
-    a.href=fileData; 
-    a.download=fileName; 
-    document.body.appendChild(a); 
-    a.click(); 
-    document.body.removeChild(a); 
-};
+function downloadFileFromPreview(fileData, fileName) { const a=document.createElement('a'); a.href=fileData; a.download=fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+window.downloadFileFromPreview = downloadFileFromPreview;
 
-// =============================================================
-// USER AVATAR
-// =============================================================
-window.userAvatarData = {};
+// ======================== USER AVATAR ========================
+let userAvatarData = {};
+let currentUsername = null;
+let currentRole = null;
+let appData = { questionPapers: { cat1: { subjects: ['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'], files: {} }, cat2: { subjects: ['BME201','BME202','BME203','BME204','BME205','BME206','BME207','BME208'], files: {} }, cat3: { subjects: ['BME301','BME302','BME303','BME304','BME305','BME306','BME307','BME308'], files: {} } }, subjectMaterials: { subjects: ['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'], files: {} }, uploadHistory: [], approvalRequests: [], approvedRequests: [], userLogins: [], userActivity: [], userEmails: {} };
 
-window.getAvatarInitials = function(username) {
-    if (!username) return 'U';
-    const parts = username.split(' ');
-    if (parts.length >= 2) return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
-    return username.substring(0,2).toUpperCase();
-};
-
-window.updateAvatarDisplay = function() {
-    const initialsEl = document.getElementById('avatarInitials');
-    const imageEl = document.getElementById('avatarImage');
-    if (!initialsEl || !imageEl) return;
-    if (window.userAvatarData && window.userAvatarData.data) {
-        initialsEl.style.display = 'none';
-        imageEl.style.display = 'block';
-        imageEl.src = window.userAvatarData.data;
-    } else {
-        initialsEl.style.display = 'flex';
-        imageEl.style.display = 'none';
-        initialsEl.textContent = window.getAvatarInitials(window.currentUsername);
-    }
-};
-
-window.showAvatarUpload = function() {
-    if (!window.currentUsername) return;
+function getAvatarInitials(u) { if (!u) return 'U'; const p = u.split(' '); if (p.length >= 2) return (p[0][0]+p[p.length-1][0]).toUpperCase(); return u.substring(0,2).toUpperCase(); }
+function updateAvatarDisplay() {
+    const el = document.getElementById('avatarInitials'), img = document.getElementById('avatarImage');
+    if (!el || !img) return;
+    if (userAvatarData && userAvatarData.data) { el.style.display = 'none'; img.style.display = 'block'; img.src = userAvatarData.data; }
+    else { el.style.display = 'flex'; img.style.display = 'none'; el.textContent = getAvatarInitials(currentUsername); }
+}
+function showAvatarUpload() {
+    if (!currentUsername) return;
     const modal = document.createElement('div');
     modal.className = 'modal';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3><i class="fas fa-user-circle" style="color:#0a4b78;"></i> Update Profile Picture</h3>
-            <div class="avatar-upload-modal">
-                <div class="avatar-preview" id="avatarPreview">
-                    ${window.userAvatarData && window.userAvatarData.data ? `<img src="${window.userAvatarData.data}" alt="Avatar" />` : window.getAvatarInitials(window.currentUsername)}
-                </div>
-                <p style="color:#1f5175; margin-bottom:12px;">Click below to upload a new profile picture</p>
-                <input type="file" id="avatarFileInput" accept="image/*" />
-                <button class="btn-primary" onclick="document.getElementById('avatarFileInput').click()"><i class="fas fa-upload"></i> Choose Image</button>
-                <div style="margin-top:12px;">
-                    <button class="btn-danger" onclick="window.removeAvatar()" style="margin-right:8px;"><i class="fas fa-trash"></i> Remove</button>
-                    <button class="btn-outline" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i> Close</button>
-                </div>
-            </div>
-        </div>
-    `;
+    modal.innerHTML = `<div class="modal-content"><h3>Update Profile Picture</h3><div class="avatar-upload-modal"><div class="avatar-preview">${userAvatarData && userAvatarData.data ? `<img src="${userAvatarData.data}" />` : getAvatarInitials(currentUsername)}</div><input type="file" id="avatarFileInput" accept="image/*" /><button class="btn-primary" onclick="document.getElementById('avatarFileInput').click()">Choose Image</button><div style="margin-top:12px;"><button class="btn-danger" onclick="removeAvatar()" style="margin-right:8px;">Remove</button><button class="btn-outline" onclick="this.closest('.modal').remove()">Close</button></div></div></div>`;
     document.body.appendChild(modal);
     document.getElementById('avatarFileInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -961,886 +910,368 @@ window.showAvatarUpload = function() {
             const reader = new FileReader();
             reader.onload = function(ev) {
                 const dataUrl = ev.target.result;
-                window.userAvatarData = { data: dataUrl, name: file.name };
-                window.saveUserAvatar(window.currentUsername, dataUrl);
-                window.updateAvatarDisplay();
+                userAvatarData = { data: dataUrl, name: file.name };
+                localStorage.setItem('userAvatar_' + currentUsername, dataUrl);
+                updateAvatarDisplay();
                 document.querySelector('.modal').remove();
-                window.showMessage('Avatar Updated', 'Your profile picture has been updated successfully!');
+                showMessage('Avatar Updated', 'Profile picture updated successfully!');
+                if (window.saveUserProfile) window.saveUserProfile(currentUsername, { avatar: dataUrl });
             };
             reader.readAsDataURL(file);
         }
     });
-};
-
-window.removeAvatar = function() {
-    if (confirm('Are you sure you want to remove your profile picture?')) {
-        window.userAvatarData = {};
-        window.saveUserAvatar(window.currentUsername, null);
-        window.updateAvatarDisplay();
+}
+function removeAvatar() {
+    if (confirm('Remove profile picture?')) {
+        userAvatarData = {};
+        localStorage.removeItem('userAvatar_' + currentUsername);
+        updateAvatarDisplay();
         document.querySelector('.modal').remove();
-        window.showMessage('Avatar Removed', 'Your profile picture has been removed.');
+        showMessage('Avatar Removed', 'Profile picture removed.');
+        if (window.saveUserProfile) window.saveUserProfile(currentUsername, { avatar: null });
     }
-};
+}
+window.showAvatarUpload = showAvatarUpload;
+window.removeAvatar = removeAvatar;
+window.updateAvatarDisplay = updateAvatarDisplay;
 
-window.saveUserAvatar = function(username, data) {
-    const key = 'userAvatar_' + username;
-    if (data) localStorage.setItem(key, data);
-    else localStorage.removeItem(key);
-};
+function loadUserAvatar(u) {
+    const data = localStorage.getItem('userAvatar_' + u);
+    userAvatarData = data ? { data: data } : {};
+    updateAvatarDisplay();
+}
+window.loadUserAvatar = loadUserAvatar;
 
-window.loadUserAvatar = function(username) {
-    const key = 'userAvatar_' + username;
-    const data = localStorage.getItem(key);
-    window.userAvatarData = data ? { data: data } : {};
-    window.updateAvatarDisplay();
-};
+// ======================== NAVIGATION ========================
+let uploadCategory = 'questionPapers';
 
-// =============================================================
-// LOCAL STORAGE HELPERS
-// =============================================================
-window.broadcastUpdate = function() { localStorage.setItem('mediVaultUpdate', Date.now().toString()); };
-
-window.addEventListener('storage', function(e) {
-    if (e.key === 'mediVaultData' || e.key === 'mediVaultUsers' || e.key === 'mediVaultUserNames' || e.key === 'mediVaultUpdate') {
-        window.appData = window.loadData();
-        window.registeredUsers = window.loadUsers();
-        window.userNamesData = window.loadUserNamesData();
-        window.updateCounts();
-        window.updatePendingBadge();
-        window.refreshCurrentPage();
-        window.updateUserNameDisplay();
-    }
-});
-
-// =============================================================
-// USER NAME MANAGEMENT
-// =============================================================
-window.userNamesData = {};
-
-window.loadUserNamesData = function() {
-    try { const raw = localStorage.getItem('mediVaultUserNames'); return raw ? JSON.parse(raw) : {}; } catch(e) { return {}; }
-};
-
-window.saveUserNamesData = function(data) { localStorage.setItem('mediVaultUserNames', JSON.stringify(data)); window.broadcastUpdate(); };
-
-window.getStoredUserName = function(username) { const data = window.loadUserNamesData(); return data[username] || null; };
-
-window.setStoredUserName = function(username, name) { const data = window.loadUserNamesData(); data[username] = name; window.saveUserNamesData(data); };
-
-window.updateUserNameDisplay = function() {
-    const el = document.getElementById('userNameDisplay');
-    if (el && window.currentUsername) {
-        const name = window.getStoredUserName(window.currentUsername);
-        if (name) el.textContent = name;
-        else {
-            // Try Firebase
-            getUserProfile(window.currentUsername).then(profile => {
-                if (profile && profile.name) {
-                    el.textContent = profile.name;
-                    window.setStoredUserName(window.currentUsername, profile.name);
-                }
-            });
-        }
-    }
-};
-
-// =============================================================
-// DATA STORAGE
-// =============================================================
-window.getDefaultData = function() {
-    return {
-        questionPapers: {
-            cat1: { subjects: ['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'], files: {} },
-            cat2: { subjects: ['BME201','BME202','BME203','BME204','BME205','BME206','BME207','BME208'], files: {} },
-            cat3: { subjects: ['BME301','BME302','BME303','BME304','BME305','BME306','BME307','BME308'], files: {} }
-        },
-        subjectMaterials: { subjects: ['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'], files: {} },
-        uploadHistory: [],
-        approvalRequests: [],
-        approvedRequests: [],
-        userLogins: [],
-        userActivity: [],
-        userEmails: {}
-    };
-};
-
-window.loadUsers = function() {
-    try { const raw = localStorage.getItem('mediVaultUsers'); return raw ? JSON.parse(raw) : {}; } catch(e) { return {}; }
-};
-
-window.saveUsers = function(users) { localStorage.setItem('mediVaultUsers', JSON.stringify(users)); window.broadcastUpdate(); };
-
-window.loadData = function() {
-    try {
-        const raw = localStorage.getItem('mediVaultData');
-        if (raw) {
-            const data = JSON.parse(raw);
-            const def = window.getDefaultData();
-            for (let k in def) if (!data[k]) data[k] = def[k];
-            for (let cat in def.questionPapers) {
-                if (!data.questionPapers[cat]) data.questionPapers[cat] = { subjects: [...def.questionPapers[cat].subjects], files: {} };
-                if (!data.questionPapers[cat].subjects || data.questionPapers[cat].subjects.length===0) data.questionPapers[cat].subjects = [...def.questionPapers[cat].subjects];
-                if (!data.questionPapers[cat].files) data.questionPapers[cat].files = {};
-            }
-            if (!data.subjectMaterials.subjects || data.subjectMaterials.subjects.length===0) data.subjectMaterials.subjects = [...def.subjectMaterials.subjects];
-            if (!data.subjectMaterials.files) data.subjectMaterials.files = {};
-            if (!data.approvalRequests) data.approvalRequests = [];
-            if (!data.approvedRequests) data.approvedRequests = [];
-            if (!data.userLogins) data.userLogins = [];
-            if (!data.userActivity) data.userActivity = [];
-            if (!data.userEmails) data.userEmails = {};
-            return data;
-        }
-    } catch(e) { console.error('Load data error:', e); }
-    return window.getDefaultData();
-};
-
-window.saveData = function(data) {
-    localStorage.setItem('mediVaultData', JSON.stringify(data));
-    window.updateCounts();
-    window.updatePendingBadge();
-    window.broadcastUpdate();
-};
-
-// =============================================================
-// GLOBALS
-// =============================================================
-window.appData = window.loadData();
-window.registeredUsers = window.loadUsers();
-window.currentRole = null;
-window.currentUsername = null;
-
-// =============================================================
-// HELPERS
-// =============================================================
-window.isAdmin = function() { return window.currentRole === 'admin'; };
-window.isFaculty = function() { return window.currentRole === 'faculty'; };
-window.isAdminOrFaculty = function() { return window.isAdmin() || window.isFaculty(); };
-
-window.updateCounts = function() {
-    let qp=0, sm=0;
-    for (let cat in window.appData.questionPapers) {
-        const files = window.appData.questionPapers[cat].files || {};
-        for (let s in files) qp += files[s].length;
-    }
-    const smFiles = window.appData.subjectMaterials.files || {};
-    for (let s in smFiles) sm += smFiles[s].length;
-    const qpEl = document.getElementById('qpCount');
-    const smEl = document.getElementById('smCount');
-    if (qpEl) qpEl.textContent = qp + ' files';
-    if (smEl) smEl.textContent = sm + ' files';
-};
-
-window.updatePendingBadge = function() {
-    const pending = window.appData.approvalRequests ? window.appData.approvalRequests.filter(r => r.status === 'pending').length : 0;
-    const badge = document.getElementById('pendingCount');
-    if (badge) {
-        if (pending > 0 && window.isAdmin()) {
-            badge.style.display = 'flex';
-            badge.textContent = pending;
-        } else badge.style.display = 'none';
-    }
-};
-
-window.registerUser = function(username, password, role) {
-    if (window.registeredUsers[username]) return false;
-    window.registeredUsers[username] = { password, role, registeredAt: Date.now() };
-    window.saveUsers(window.registeredUsers);
-    return true;
-};
-
-window.validateUser = function(username, password) {
-    if (window.registeredUsers[username]) return window.registeredUsers[username].password === password;
-    return false;
-};
-
-window.updateUserPassword = function(username, newPassword) {
-    if (window.registeredUsers[username]) { window.registeredUsers[username].password = newPassword; window.saveUsers(window.registeredUsers); return true; }
-    return false;
-};
-
-window.removeUser = function(username) {
-    if (username === '732925MDR049') { alert('Cannot remove admin user'); return false; }
-    if (window.registeredUsers[username]) { delete window.registeredUsers[username]; window.saveUsers(window.registeredUsers); return true; }
-    return false;
-};
-
-window.removeMultipleUsers = function(usernames) {
-    let count=0;
-    usernames.forEach(u => { if(u!=='732925MDR049' && window.registeredUsers[u]) { delete window.registeredUsers[u]; count++; } });
-    if(count>0) window.saveUsers(window.registeredUsers);
-    return count;
-};
-
-window.logUserActivity = function(username, role, action, details) {
-    window.appData.userActivity.push({ username, role, action, details, timestamp: Date.now() });
-    if(window.appData.userActivity.length>500) window.appData.userActivity = window.appData.userActivity.slice(-500);
-    window.saveData(window.appData);
-};
-
-window.logUserLogin = function(username, role) {
-    window.appData.userLogins.push({ username, role, timestamp: Date.now() });
-    if(window.appData.userLogins.length>500) window.appData.userLogins = window.appData.userLogins.slice(-500);
-    window.saveData(window.appData);
-    window.logUserActivity(username, role, 'Login', 'User logged in');
-};
-
-window.saveUserEmail = function(username, email) { window.appData.userEmails[username] = email; window.saveData(window.appData); };
-
-window.getUserEmail = function(username) { return window.appData.userEmails[username] || ''; };
-
-// =============================================================
-// PAGE NAVIGATION
-// =============================================================
-window.uploadCategory = 'questionPapers';
-
-window.showPage = function(page) {
+function showPage(page) {
     const container = document.getElementById('pageContainer');
     if (!container) return;
     if (page === 'dashboard') { container.innerHTML = ''; return; }
-    if (page === 'approvals' && !window.isAdmin()) {
-        container.innerHTML = '<div class="page-container"><p style="color:#dc3545; text-align:center; padding:40px;"><i class="fas fa-lock" style="font-size:2rem; display:block; margin-bottom:12px;"></i>Access Denied. Only Admin can access approvals.</p></div>';
+    if (page === 'approvals' && !(currentRole === 'admin')) {
+        container.innerHTML = '<div class="page-container"><p style="color:#dc3545;text-align:center;padding:40px;"><i class="fas fa-lock" style="font-size:2rem;display:block;margin-bottom:12px;"></i>Access Denied. Admin only.</p></div>';
         return;
     }
-    if (page === 'monitoring' && !window.isAdminOrFaculty()) {
-        container.innerHTML = '<div class="page-container"><p style="color:#dc3545; text-align:center; padding:40px;"><i class="fas fa-lock" style="font-size:2rem; display:block; margin-bottom:12px;"></i>Access Denied. Only Admin and Faculty can access monitoring.</p></div>';
+    if (page === 'monitoring' && !(currentRole === 'admin' || currentRole === 'faculty')) {
+        container.innerHTML = '<div class="page-container"><p style="color:#dc3545;text-align:center;padding:40px;"><i class="fas fa-lock" style="font-size:2rem;display:block;margin-bottom:12px;"></i>Access Denied. Admin/Faculty only.</p></div>';
         return;
     }
-    switch(page) {
-        case 'questionPapers': window.renderQuestionPapers(container); break;
-        case 'subjectMaterials': window.renderSubjectMaterials(container); break;
-        case 'upload': window.renderUploadPage(container); break;
-        case 'search': window.renderSearchPage(container); break;
-        case 'myUploads': window.renderMyUploads(container); break;
-        case 'approvals': window.renderApprovalsPage(container); break;
-        case 'monitoring': window.renderMonitoringPage(container); break;
-        case 'profile': window.renderProfilePage(container); break;
-        case 'department': window.renderDepartmentPage(container); break;
-        default: container.innerHTML = '<p>Page not found</p>';
-    }
-};
+    const pages = {
+        questionPapers: renderQuestionPapers,
+        subjectMaterials: renderSubjectMaterials,
+        upload: renderUploadPage,
+        search: renderSearchPage,
+        myUploads: renderMyUploads,
+        approvals: renderApprovalsPage,
+        monitoring: renderMonitoringPage,
+        profile: renderProfilePage,
+        department: renderDepartmentPage
+    };
+    if (pages[page]) pages[page](container);
+    else container.innerHTML = '<p>Page not found</p>';
+}
+window.showPage = showPage;
 
-window.refreshCurrentPage = function() {
-    const container = document.getElementById('pageContainer');
-    if (container && container.innerHTML !== '') {
-        const h2 = container.querySelector('.page-container h2');
-        if (h2) {
-            const text = h2.textContent;
-            if (text.includes('Question Papers')) window.renderQuestionPapers(container);
-            else if (text.includes('Subject Materials')) window.renderSubjectMaterials(container);
-            else if (text.includes('Upload')) window.renderUploadPage(container);
-            else if (text.includes('Search')) window.renderSearchPage(container);
-            else if (text.includes('My Uploads')) window.renderMyUploads(container);
-            else if (text.includes('Approval')) window.renderApprovalsPage(container);
-            else if (text.includes('Monitoring')) window.renderMonitoringPage(container);
-            else if (text.includes('Profile')) window.renderProfilePage(container);
-            else if (text.includes('Medical Electronics Department')) window.renderDepartmentPage(container);
-        }
-    }
-};
+// ======================== RENDER FUNCTIONS ========================
+function renderDepartmentPage(c) {
+    c.innerHTML = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-university" style="color:#0a4b78;"></i> Medical Electronics Department — VCET ERODE</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
+        <div class="dept-image-placeholder"><div class="dept-icons"><i class="fas fa-heartbeat"></i><i class="fas fa-microscope"></i><i class="fas fa-brain"></i></div><h3>💡 Innovating Healthcare Through Technology</h3><p>Department of Medical Electronics Engineering · Since 2001</p><p style="font-size:0.9rem;margin-top:8px;opacity:0.8;"><i class="fas fa-map-marker-alt"></i> VCET Campus, Erode</p></div>
+        <div class="dept-features"><div class="feature-card"><i class="fas fa-heartbeat"></i><h4>Biomedical Signal Processing</h4><p>Advanced research in ECG, EEG, EMG signal analysis and medical imaging.</p></div><div class="feature-card"><i class="fas fa-microchip"></i><h4>Medical Device Innovation</h4><p>Smart medical devices, wearables, and diagnostic equipment.</p></div><div class="feature-card"><i class="fas fa-brain"></i><h4>AI in Healthcare</h4><p>Machine learning for disease diagnosis and treatment planning.</p></div><div class="feature-card"><i class="fas fa-hospital"></i><h4>Hospital Technology Management</h4><p>Biomedical equipment maintenance and patient monitoring.</p></div></div>
+        <div class="stats-grid"><div class="stats-card"><div class="stat-number">2001</div><div class="stat-label">Year of Establishment</div></div><div class="stats-card"><div class="stat-number">500+</div><div class="stat-label">Alumni Network</div></div><div class="stats-card"><div class="stat-number">30+</div><div class="stat-label">Industry Collaborations</div></div><div class="stats-card"><div class="stat-number">95%</div><div class="stat-label">Placement Record</div></div></div></div>`;
+}
 
-// =============================================================
-// RENDER FUNCTIONS
-// =============================================================
-window.renderDepartmentPage = function(container) {
-    container.innerHTML = `
-        <div class="page-container">
-            <div class="page-header"><h2><i class="fas fa-university" style="color:#0a4b78;"></i> Medical Electronics Department — VCET ERODE</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
-            <div class="dept-image-placeholder">
-                <div class="dept-icons"><i class="fas fa-heartbeat"></i><i class="fas fa-microscope"></i><i class="fas fa-brain"></i></div>
-                <h3>💡 Innovating Healthcare Through Technology</h3>
-                <p>Department of Medical Electronics Engineering · Since 2001</p>
-                <p style="font-size:0.9rem; margin-top:8px; opacity:0.8;"><i class="fas fa-map-marker-alt"></i> VCET Campus, Erode</p>
-            </div>
-            <div class="dept-features">
-                <div class="feature-card"><i class="fas fa-heartbeat"></i><h4>Biomedical Signal Processing</h4><p>Advanced research in ECG, EEG, EMG signal analysis and medical imaging techniques.</p></div>
-                <div class="feature-card"><i class="fas fa-microchip"></i><h4>Medical Device Innovation</h4><p>Design and development of smart medical devices, wearables, and diagnostic equipment.</p></div>
-                <div class="feature-card"><i class="fas fa-brain"></i><h4>AI in Healthcare</h4><p>Machine learning and deep learning applications for disease diagnosis and treatment planning.</p></div>
-                <div class="feature-card"><i class="fas fa-hospital"></i><h4>Hospital Technology Management</h4><p>Training in biomedical equipment maintenance, healthcare IT systems, and patient monitoring.</p></div>
-            </div>
-            <div class="stats-grid">
-                <div class="stats-card"><div class="stat-number">2001</div><div class="stat-label">Year of Establishment</div></div>
-                <div class="stats-card"><div class="stat-number">500+</div><div class="stat-label">Alumni Network</div></div>
-                <div class="stats-card"><div class="stat-number">30+</div><div class="stat-label">Industry Collaborations</div></div>
-                <div class="stats-card"><div class="stat-number">95%</div><div class="stat-label">Placement Record</div></div>
-            </div>
-        </div>`;
-};
+function renderProfilePage(c) {
+    const name = localStorage.getItem('userName_' + currentUsername) || 'Not set';
+    const email = appData.userEmails[currentUsername] || '';
+    c.innerHTML = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-user-cog" style="color:#0a4b78;"></i> Profile Settings</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
+        <div class="profile-section"><h3 style="color:#0a2b48;margin-bottom:16px;">User Information</h3><div class="profile-field"><span class="profile-label">Username</span><span class="profile-value">${currentUsername}</span></div><div class="profile-field"><span class="profile-label">Role</span><span class="profile-value">${currentRole || 'N/A'}</span></div><div class="profile-field"><span class="profile-label">Name</span><span class="profile-value">${name}</span></div></div>
+        <div class="profile-section"><h3 style="color:#0a2b48;margin-bottom:16px;">Update Your Name</h3><div style="display:flex;gap:12px;flex-wrap:wrap;"><input type="text" id="profileNameInput" class="login-input" placeholder="Enter full name" value="${name}" style="flex:1;max-width:400px;" /><button class="btn-primary" onclick="saveNameProfile()"><i class="fas fa-save"></i> Update Name</button></div><div id="nameStatus" style="margin-top:12px;"></div></div>
+        <div class="profile-section"><h3 style="color:#0a2b48;margin-bottom:16px;">Email Notifications</h3><div style="display:flex;gap:12px;flex-wrap:wrap;"><input type="email" id="profileEmailInput" class="login-input" placeholder="Enter email" value="${email}" style="flex:1;max-width:400px;" /><button class="btn-primary" onclick="saveUserEmailProfile()"><i class="fas fa-save"></i> Save Email</button></div><div id="emailStatus" style="margin-top:12px;"></div></div></div>`;
+}
 
-window.renderProfilePage = function(container) {
-    const user = window.registeredUsers[window.currentUsername];
-    const storedName = window.getStoredUserName(window.currentUsername);
-    const email = window.getUserEmail(window.currentUsername);
-    const registeredDate = user ? window.formatDateShort(user.registeredAt) : 'N/A';
-    container.innerHTML = `
-        <div class="page-container">
-            <div class="page-header"><h2><i class="fas fa-user-cog" style="color:#0a4b78;"></i> Profile Settings</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
-            <div class="profile-section">
-                <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-user-circle" style="color:#0a4b78;"></i> User Information</h3>
-                <div class="profile-field"><span class="profile-label">Username</span><span class="profile-value">${window.currentUsername}</span></div>
-                <div class="profile-field"><span class="profile-label">Role</span><span class="profile-value">${user ? user.role : 'N/A'}</span></div>
-                <div class="profile-field"><span class="profile-label">Registered</span><span class="profile-value">${registeredDate}</span></div>
-                <div class="profile-field"><span class="profile-label">Name</span><span class="profile-value">${storedName || 'Not set'}</span></div>
-            </div>
-            <div class="profile-section">
-                <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-user-edit" style="color:#0a4b78;"></i> Update Your Name</h3>
-                <p style="color:#1f5175; font-size:0.9rem; margin-bottom:12px;">Enter your full name to be displayed on the portal.</p>
-                <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                    <input type="text" id="profileNameInput" class="login-input" placeholder="Enter your full name" value="${storedName || ''}" style="flex:1; max-width:400px;" />
-                    <button class="btn-primary" onclick="window.saveNameProfile()"><i class="fas fa-save"></i> Update Name</button>
-                </div>
-                <div id="nameStatus" style="margin-top:12px;"></div>
-            </div>
-            <div class="profile-section">
-                <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-key" style="color:#0a4b78;"></i> Change Password</h3>
-                <p style="color:#1f5175; font-size:0.9rem; margin-bottom:12px;">Enter your current password and choose a new password.</p>
-                <div style="margin-bottom:12px;"><label style="font-weight:500; display:block; margin-bottom:4px; color:#0a2b48;">Current Password</label><div class="password-field"><input type="password" id="currentPassword" class="login-input" placeholder="Enter current password" style="padding-right:40px;" /><button type="button" class="eye-btn-small" onclick="window.togglePasswordField('currentPassword')"><i class="fas fa-eye"></i></button></div></div>
-                <div style="margin-bottom:12px;"><label style="font-weight:500; display:block; margin-bottom:4px; color:#0a2b48;">New Password</label><div class="password-field"><input type="password" id="newPassword" class="login-input" placeholder="Enter new password" style="padding-right:40px;" /><button type="button" class="eye-btn-small" onclick="window.togglePasswordField('newPassword')"><i class="fas fa-eye"></i></button></div></div>
-                <div style="margin-bottom:12px;"><label style="font-weight:500; display:block; margin-bottom:4px; color:#0a2b48;">Confirm New Password</label><div class="password-field"><input type="password" id="confirmPassword" class="login-input" placeholder="Confirm new password" style="padding-right:40px;" /><button type="button" class="eye-btn-small" onclick="window.togglePasswordField('confirmPassword')"><i class="fas fa-eye"></i></button></div></div>
-                <button class="btn-primary" onclick="window.changePassword()"><i class="fas fa-save"></i> Update Password</button>
-                <div id="passwordStatus" style="margin-top:12px;"></div>
-            </div>
-            <div class="profile-section">
-                <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-envelope" style="color:#0a4b78;"></i> Email Notifications</h3>
-                <p style="color:#1f5175; font-size:0.9rem; margin-bottom:12px;">Set your email address to receive notifications.</p>
-                <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                    <input type="email" id="profileEmailInput" class="login-input" placeholder="Enter your email address" value="${email}" style="flex:1; max-width:400px;" />
-                    <button class="btn-primary" onclick="window.saveUserEmailProfile()"><i class="fas fa-save"></i> Save Email</button>
-                </div>
-                <div id="emailStatus" style="margin-top:12px;"></div>
-            </div>
-        </div>`;
-};
-
-window.saveNameProfile = function() {
+function saveNameProfile() {
     const input = document.getElementById('profileNameInput');
     if (!input) return;
     const name = input.value.trim();
     const statusDiv = document.getElementById('nameStatus');
-    if (!name) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your name.</div>`; return; }
-    window.setStoredUserName(window.currentUsername, name);
-    // Also save to Firebase
-    saveUserProfile(window.currentUsername, { name: name, createdAt: Date.now() });
-    const display = document.getElementById('userNameDisplay');
-    if (display) display.textContent = name;
-    if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Name updated successfully!</div>`;
-    setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 5000);
-    window.logUserActivity(window.currentUsername, window.currentRole, 'Update Name', `Updated name to ${name}`);
-};
+    if (!name) { statusDiv.innerHTML = `<div style="color:#dc3545;padding:8px 12px;background:rgba(220,53,69,0.1);border-radius:12px;">Please enter your name.</div>`; return; }
+    localStorage.setItem('userName_' + currentUsername, name);
+    document.getElementById('userNameDisplay').textContent = name;
+    statusDiv.innerHTML = `<div style="color:#28a745;padding:8px 12px;background:rgba(40,167,69,0.1);border-radius:12px;">Name updated successfully!</div>`;
+    setTimeout(() => statusDiv.innerHTML = '', 5000);
+    if (window.saveUserProfile) window.saveUserProfile(currentUsername, { displayName: name });
+}
 
-window.changePassword = function() {
-    const currentPass = document.getElementById('currentPassword');
-    const newPass = document.getElementById('newPassword');
-    const confirmPass = document.getElementById('confirmPassword');
-    const statusDiv = document.getElementById('passwordStatus');
-    if (!currentPass || !newPass || !confirmPass) return;
-    if (!currentPass.value) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter your current password.</div>`; return; }
-    if (!window.validateUser(window.currentUsername, currentPass.value)) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Current password is incorrect.</div>`; return; }
-    if (!newPass.value || newPass.value.length < 6) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> New password must be at least 6 characters.</div>`; return; }
-    if (newPass.value !== confirmPass.value) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Passwords do not match.</div>`; return; }
-    if (window.updateUserPassword(window.currentUsername, newPass.value)) {
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Password updated successfully!</div>`;
-        currentPass.value = ''; newPass.value = ''; confirmPass.value = '';
-        window.logUserActivity(window.currentUsername, window.currentRole, 'Change Password', 'Password changed successfully');
-        setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 5000);
-        window.showMessage('✅ Password Updated', 'Your password has been changed successfully.');
-    } else if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error updating password.</div>`;
-};
-
-window.saveUserEmailProfile = function() {
-    const emailInput = document.getElementById('profileEmailInput');
-    if (!emailInput) return;
-    const email = emailInput.value.trim();
+function saveUserEmailProfile() {
+    const input = document.getElementById('profileEmailInput');
+    if (!input) return;
+    const email = input.value.trim();
     const statusDiv = document.getElementById('emailStatus');
-    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) { if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter a valid email address.</div>`; return; }
-    window.saveUserEmail(window.currentUsername, email);
-    if(statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Email saved successfully!</div>`;
-    setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 5000);
-    window.logUserActivity(window.currentUsername, window.currentRole, 'Update Email', `Updated email to ${email}`);
-};
+    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) { statusDiv.innerHTML = `<div style="color:#dc3545;padding:8px 12px;background:rgba(220,53,69,0.1);border-radius:12px;">Invalid email.</div>`; return; }
+    appData.userEmails[currentUsername] = email;
+    localStorage.setItem('mediVaultData', JSON.stringify(appData));
+    statusDiv.innerHTML = `<div style="color:#28a745;padding:8px 12px;background:rgba(40,167,69,0.1);border-radius:12px;">Email saved!</div>`;
+    setTimeout(() => statusDiv.innerHTML = '', 5000);
+    if (window.saveUserProfile) window.saveUserProfile(currentUsername, { email: email });
+}
 
-// =============================================================
-// MONITORING PAGE
-// =============================================================
-window.renderMonitoringPage = function(container) {
-    const logins = window.appData.userLogins || [];
-    const activities = window.appData.userActivity || [];
-    const users = window.registeredUsers;
-    const userNames = window.loadUserNamesData();
+// ======================== MONITORING ========================
+function renderMonitoringPage(c) {
+    const users = JSON.parse(localStorage.getItem('mediVaultUsers') || '{}');
     const totalUsers = Object.keys(users).length;
-    const totalLogins = logins.length;
-    const totalUploads = window.appData.uploadHistory.length;
-    const totalRequests = window.appData.approvalRequests ? window.appData.approvalRequests.length : 0;
-    const recentLogins = logins.slice(-10).reverse();
-    const recentActivities = activities.slice(-20).reverse();
+    const totalLogins = appData.userLogins ? appData.userLogins.length : 0;
+    const totalUploads = appData.uploadHistory ? appData.uploadHistory.length : 0;
+    const recentLogins = (appData.userLogins || []).slice(-10).reverse();
+    c.innerHTML = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-chart-line" style="color:#0a4b78;"></i> Monitoring Dashboard</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
+        <div class="stats-grid"><div class="stats-card"><div class="stat-number">${totalUsers}</div><div class="stat-label">Total Users</div></div><div class="stats-card"><div class="stat-number">${totalLogins}</div><div class="stat-label">Total Logins</div></div><div class="stats-card"><div class="stat-number">${totalUploads}</div><div class="stat-label">Total Uploads</div></div></div>
+        <div><h4 style="color:#0a2b48;margin-bottom:12px;">Recent Logins</h4>${recentLogins.length === 0 ? '<p style="color:#1f5175;text-align:center;padding:20px;">No login records</p>' : recentLogins.map(l => `<div class="monitoring-item"><strong>${l.username}</strong> <span style="color:#1f5175;font-size:0.75rem;">${l.role}</span> <span style="float:right;font-size:0.7rem;color:#1f5175;">${formatDateTime(l.timestamp)}</span></div>`).join('')}</div></div>`;
+}
 
-    let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-chart-line" style="color:#0a4b78;"></i> Monitoring Dashboard</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
-        <div class="stats-grid">
-            <div class="stats-card"><div class="stat-number">${totalUsers}</div><div class="stat-label">Total Users</div></div>
-            <div class="stats-card"><div class="stat-number">${totalLogins}</div><div class="stat-label">Total Logins</div></div>
-            <div class="stats-card"><div class="stat-number">${totalUploads}</div><div class="stat-label">Total Uploads</div></div>
-            <div class="stats-card"><div class="stat-number">${totalRequests}</div><div class="stat-label">Approval Requests</div></div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
-            <div><h4 style="color:#0a2b48; margin-bottom:12px;"><i class="fas fa-users"></i> Registered Users</h4>
-                <div style="margin-bottom:8px;">${window.isAdmin() ? `<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:8px; background:rgba(255,255,255,0.2); border-radius:12px;">
-                    <input type="checkbox" id="selectAllUsers" onchange="window.toggleSelectAll()" style="width:16px; height:16px;" />
-                    <label for="selectAllUsers" style="font-size:0.85rem; color:#1f5175;">Select All</label>
-                    <button class="btn-danger" onclick="window.deleteSelectedUsers()" style="padding:4px 16px; font-size:0.8rem;"><i class="fas fa-trash"></i> Delete Selected</button>
-                    <span id="selectedCount" style="font-size:0.85rem; color:#1f5175;">0 selected</span>
-                </div>` : ''}</div>
-                <div style="max-height:400px; overflow-y:auto;">`;
-    const validUsers = {};
-    for (let u in users) if (users[u] && users[u].password && users[u].role) validUsers[u] = users[u];
-    if (Object.keys(validUsers).length === 0) html += '<p style="color:#1f5175; text-align:center; padding:20px;">No registered users</p>';
-    else for (let u in validUsers) {
-        const user = validUsers[u];
-        const isAdminUser = u === '732925MDR049';
-        const userName = userNames[u] || 'Not set';
-        const email = window.getUserEmail(u);
-        html += `<div class="monitoring-item"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <div>${window.isAdmin() && !isAdminUser ? `<input type="checkbox" class="user-checkbox" data-username="${u}" onchange="window.updateSelectedCount()" style="margin-right:8px; width:16px; height:16px;" />` : ''}
-            <strong>${u}</strong> <span style="font-size:0.75rem; color:#1f5175;">${user.role}</span>
-            ${userName!=='Not set' ? `<span style="font-size:0.7rem; color:#075e54;"><i class="fas fa-user" style="color:#0a4b78;"></i> ${userName}</span>` : ''}
-            ${email ? `<span style="font-size:0.7rem; color:#0a4b78;"><i class="fas fa-envelope" style="color:#0a4b78;"></i> ${email}</span>` : ''}
-            </div>${isAdminUser ? '<span style="font-size:0.7rem; color:#dc3545;">(Admin)</span>' : ''}</div></div>`;
-    }
-    html += `</div></div>
-            <div><h4 style="color:#0a2b48; margin-bottom:12px;"><i class="fas fa-clock"></i> Recent Logins</h4><div style="max-height:400px; overflow-y:auto;">`;
-    if (recentLogins.length === 0) html += '<p style="color:#1f5175; text-align:center; padding:20px;">No login records yet</p>';
-    else recentLogins.forEach(l => {
-        if (l && l.username && l.role) {
-            const userName = userNames[l.username] || 'Not set';
-            html += `<div class="monitoring-item"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                <div><strong>${l.username}</strong> <span style="font-size:0.75rem; color:#1f5175;">${l.role}</span>
-                ${userName!=='Not set' ? `<span style="font-size:0.7rem; color:#075e54;"><i class="fas fa-user" style="color:#0a4b78;"></i> ${userName}</span>` : ''}</div>
-                <span style="font-size:0.7rem; color:#1f5175;">${window.formatDateTime(l.timestamp)}</span>
-            </div></div>`;
-        }
-    });
-    html += `</div></div></div>
-        <div style="margin-top:20px;"><h4 style="color:#0a2b48; margin-bottom:12px;"><i class="fas fa-list"></i> Recent Activity</h4><div style="max-height:400px; overflow-y:auto;">`;
-    if (recentActivities.length === 0) html += '<p style="color:#1f5175; text-align:center; padding:20px;">No activity records yet</p>';
-    else recentActivities.forEach(a => {
-        if (a && a.username && a.role && a.action) {
-            html += `<div class="monitoring-item"><div><strong>${a.username}</strong> <span style="font-size:0.75rem; color:#1f5175;">${a.role}</span> <span style="font-size:0.75rem; color:#1f5175;">${a.action}</span> <span style="font-size:0.7rem; color:#1f5175; float:right;">${window.formatDateTime(a.timestamp)}</span></div>${a.details ? `<div style="font-size:0.75rem; color:#1f5175; margin-top:4px;">${a.details}</div>` : ''}</div>`;
-        }
-    });
-    html += `</div></div></div>`;
-    container.innerHTML = html;
-};
-
-window.toggleSelectAll = function() {
-    const checkboxes = document.querySelectorAll('.user-checkbox');
-    const selectAll = document.getElementById('selectAllUsers');
-    if (!selectAll) return;
-    checkboxes.forEach(cb => cb.checked = selectAll.checked);
-    window.updateSelectedCount();
-};
-
-window.updateSelectedCount = function() {
-    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-    const el = document.getElementById('selectedCount');
-    if(el) el.textContent = checkboxes.length + ' selected';
-};
-
-window.deleteSelectedUsers = function() {
-    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-    if (checkboxes.length === 0) { window.showMessage('No Selection', 'Please select at least one user to delete.'); return; }
-    const usernames = Array.from(checkboxes).map(cb => cb.dataset.username);
-    if (!confirm(`Delete ${usernames.length} user(s)?`)) return;
-    const count = window.removeMultipleUsers(usernames);
-    if (count > 0) { window.showMessage('Users Removed', `${count} user(s) removed.`); window.renderMonitoringPage(document.getElementById('pageContainer')); }
-};
-
-window.removeUserAccount = function(username) {
-    if (username === '732925MDR049') { alert('Cannot remove admin user'); return false; }
-    if (!window.registeredUsers[username]) { alert('User not found'); return false; }
-    if (!confirm(`Remove user "${username}"?`)) return false;
-    const success = window.removeUser(username);
-    if (success) {
-        window.showMessage('User Removed', `User "${username}" has been removed.`);
-        const container = document.getElementById('pageContainer');
-        if (container && container.querySelector('.page-container h2')?.textContent.includes('Monitoring')) {
-            window.renderMonitoringPage(container);
-        }
-    }
-    return success;
-};
-
-// =============================================================
-// SUBJECT MANAGEMENT
-// =============================================================
-window.editQPSubject = function(cat, oldSubject) {
-    if (!window.isAdminOrFaculty()) { alert('Only admin and faculty can edit subjects'); return; }
-    window.showModal('Edit Question Paper Subject', `<div style="margin:12px 0;"><label style="display:block; margin-bottom:4px; font-weight:500;">Subject Code:</label><input type="text" id="editSubjectInput" class="login-input" value="${oldSubject}" placeholder="Enter subject code" /></div>`, function() {
-        const newSubject = document.getElementById('editSubjectInput').value.trim().toUpperCase();
-        if (!newSubject) { alert('Subject code cannot be empty'); return; }
-        if (window.appData.questionPapers[cat].subjects.includes(newSubject) && newSubject !== oldSubject) { alert('Subject already exists'); return; }
-        const idx = window.appData.questionPapers[cat].subjects.indexOf(oldSubject);
-        if (idx !== -1) window.appData.questionPapers[cat].subjects[idx] = newSubject;
-        if (window.appData.questionPapers[cat].files[oldSubject]) { window.appData.questionPapers[cat].files[newSubject] = window.appData.questionPapers[cat].files[oldSubject]; delete window.appData.questionPapers[cat].files[oldSubject]; }
-        window.saveData(window.appData);
-        window.logUserActivity(window.currentUsername, window.currentRole, 'Edit Subject', `Edited QP subject ${oldSubject} to ${newSubject}`);
-        window.renderQuestionPapers(document.getElementById('pageContainer'));
-    });
-};
-
-window.deleteQPSubject = function(cat, subject) {
-    if (!window.isAdminOrFaculty()) { alert('Only admin and faculty can delete subjects'); return; }
-    const files = window.appData.questionPapers[cat].files[subject] || [];
-    if (files.length > 0 && !confirm(`Subject "${subject}" has ${files.length} files. Delete?`)) return;
-    window.showModal('Delete Subject', `<p>Delete subject "<strong>${subject}</strong>" from ${cat.toUpperCase()}?</p>`, function() {
-        const idx = window.appData.questionPapers[cat].subjects.indexOf(subject);
-        if (idx !== -1) window.appData.questionPapers[cat].subjects.splice(idx, 1);
-        delete window.appData.questionPapers[cat].files[subject];
-        window.saveData(window.appData);
-        window.logUserActivity(window.currentUsername, window.currentRole, 'Delete Subject', `Deleted QP subject ${subject}`);
-        window.renderQuestionPapers(document.getElementById('pageContainer'));
-    });
-};
-
-window.addQPSubject = function(cat) {
-    if (!window.isAdminOrFaculty()) { alert('Only admin and faculty can add subjects'); return; }
-    window.showModal(`Add Subject to ${cat.toUpperCase()}`, `<div style="margin:12px 0;"><label style="display:block; margin-bottom:4px; font-weight:500;">New Subject Code:</label><input type="text" id="addSubjectInput" class="login-input" placeholder="Enter subject code" /></div>`, function() {
-        const newSubject = document.getElementById('addSubjectInput').value.trim().toUpperCase();
-        if (!newSubject) { alert('Subject code cannot be empty'); return; }
-        if (window.appData.questionPapers[cat].subjects.includes(newSubject)) { alert('Subject already exists'); return; }
-        window.appData.questionPapers[cat].subjects.push(newSubject);
-        window.appData.questionPapers[cat].files[newSubject] = [];
-        window.saveData(window.appData);
-        window.logUserActivity(window.currentUsername, window.currentRole, 'Add Subject', `Added QP subject ${newSubject}`);
-        window.renderQuestionPapers(document.getElementById('pageContainer'));
-    });
-};
-
-window.editSMSubject = function(oldSubject) {
-    if (!window.isAdminOrFaculty()) { alert('Only admin and faculty can edit subjects'); return; }
-    window.showModal('Edit Subject Material Subject', `<div style="margin:12px 0;"><label style="display:block; margin-bottom:4px; font-weight:500;">Subject Code:</label><input type="text" id="editSMSubjectInput" class="login-input" value="${oldSubject}" placeholder="Enter subject code" /></div>`, function() {
-        const newSubject = document.getElementById('editSMSubjectInput').value.trim().toUpperCase();
-        if (!newSubject) { alert('Subject code cannot be empty'); return; }
-        if (window.appData.subjectMaterials.subjects.includes(newSubject) && newSubject !== oldSubject) { alert('Subject already exists'); return; }
-        const idx = window.appData.subjectMaterials.subjects.indexOf(oldSubject);
-        if (idx !== -1) window.appData.subjectMaterials.subjects[idx] = newSubject;
-        if (window.appData.subjectMaterials.files[oldSubject]) { window.appData.subjectMaterials.files[newSubject] = window.appData.subjectMaterials.files[oldSubject]; delete window.appData.subjectMaterials.files[oldSubject]; }
-        window.saveData(window.appData);
-        window.logUserActivity(window.currentUsername, window.currentRole, 'Edit Subject', `Edited SM subject ${oldSubject} to ${newSubject}`);
-        window.renderSubjectMaterials(document.getElementById('pageContainer'));
-    });
-};
-
-window.deleteSMSubject = function(subject) {
-    if (!window.isAdminOrFaculty()) { alert('Only admin and faculty can delete subjects'); return; }
-    const files = window.appData.subjectMaterials.files[subject] || [];
-    if (files.length > 0 && !confirm(`Subject "${subject}" has ${files.length} files. Delete?`)) return;
-    window.showModal('Delete Subject', `<p>Delete subject "<strong>${subject}</strong>" from Subject Materials?</p>`, function() {
-        const idx = window.appData.subjectMaterials.subjects.indexOf(subject);
-        if (idx !== -1) window.appData.subjectMaterials.subjects.splice(idx, 1);
-        delete window.appData.subjectMaterials.files[subject];
-        window.saveData(window.appData);
-        window.logUserActivity(window.currentUsername, window.currentRole, 'Delete Subject', `Deleted SM subject ${subject}`);
-        window.renderSubjectMaterials(document.getElementById('pageContainer'));
-    });
-};
-
-window.addSMSubject = function() {
-    if (!window.isAdminOrFaculty()) { alert('Only admin and faculty can add subjects'); return; }
-    window.showModal('Add Subject to Subject Materials', `<div style="margin:12px 0;"><label style="display:block; margin-bottom:4px; font-weight:500;">New Subject Code:</label><input type="text" id="addSMSubjectInput" class="login-input" placeholder="Enter subject code" /></div>`, function() {
-        const newSubject = document.getElementById('addSMSubjectInput').value.trim().toUpperCase();
-        if (!newSubject) { alert('Subject code cannot be empty'); return; }
-        if (window.appData.subjectMaterials.subjects.includes(newSubject)) { alert('Subject already exists'); return; }
-        window.appData.subjectMaterials.subjects.push(newSubject);
-        window.appData.subjectMaterials.files[newSubject] = [];
-        window.saveData(window.appData);
-        window.logUserActivity(window.currentUsername, window.currentRole, 'Add Subject', `Added SM subject ${newSubject}`);
-        window.renderSubjectMaterials(document.getElementById('pageContainer'));
-    });
-};
-
-// =============================================================
-// QUESTION PAPERS
-// =============================================================
-window.renderQuestionPapers = function(container) {
-    const cats = ['cat1','cat2','cat3'], catNames = { cat1:'CAT-1', cat2:'CAT-2', cat3:'CAT-3 (Optional)' };
+// ======================== QUESTION PAPERS ========================
+function renderQuestionPapers(c) {
+    const cats = ['cat1','cat2','cat3'];
+    const catNames = { cat1:'CAT-1', cat2:'CAT-2', cat3:'CAT-3 (Optional)' };
     let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-file-pdf" style="color:#0a4b78;"></i> Question Papers</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>`;
     cats.forEach(cat => {
-        const data = window.appData.questionPapers[cat], files = data.files || {};
-        html += `<div style="margin:20px 0; background:rgba(255,255,255,0.2); border-radius:24px; padding:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-                <h3 style="color:#0a2b48;">${catNames[cat]}</h3>
-                ${window.isAdminOrFaculty() ? `<button class="btn-success" onclick="window.addQPSubject('${cat}')" style="padding:4px 12px; font-size:0.8rem;"><i class="fas fa-plus"></i> Add Subject</button>` : ''}
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">`;
+        const data = appData.questionPapers[cat];
+        const files = data.files || {};
+        html += `<div style="margin:20px 0;background:rgba(255,255,255,0.2);border-radius:24px;padding:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;"><h3 style="color:#0a2b48;">${catNames[cat]}</h3></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">`;
         data.subjects.forEach(subject => {
             const subjectFiles = files[subject] || [];
-            html += `<div class="category-card" onclick="window.viewQuestionPapers('${cat}','${subject}')">
-                <h4>${subject}</h4><div class="file-count">${subjectFiles.length} files</div>
-                ${window.isAdminOrFaculty() ? `<div class="admin-actions"><button class="btn-outline" onclick="event.stopPropagation(); window.editQPSubject('${cat}','${subject}')" style="padding:2px 10px; font-size:0.7rem;"><i class="fas fa-edit"></i></button><button class="btn-danger" onclick="event.stopPropagation(); window.deleteQPSubject('${cat}','${subject}')" style="padding:2px 10px; font-size:0.7rem;"><i class="fas fa-trash"></i></button></div>` : ''}
-            </div>`;
+            html += `<div class="category-card" onclick="viewQuestionPapers('${cat}','${subject}')"><h4>${subject}</h4><div class="file-count">${subjectFiles.length} files</div></div>`;
         });
         html += `</div></div>`;
     });
     html += `</div>`;
-    container.innerHTML = html;
-};
+    c.innerHTML = html;
+}
 
-window.viewQuestionPapers = function(cat, subject) {
-    const container = document.getElementById('pageContainer');
-    const files = window.appData.questionPapers[cat].files[subject] || [];
+function viewQuestionPapers(cat, subject) {
+    const c = document.getElementById('pageContainer');
+    const files = appData.questionPapers[cat].files[subject] || [];
     let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-file-pdf" style="color:#0a4b78;"></i> ${cat.toUpperCase()} - ${subject}</h2><button class="close-btn" onclick="showPage('questionPapers')"><i class="fas fa-arrow-left"></i> Back</button></div><div class="file-list">`;
-    if (files.length === 0) html += `<p style="color:#1f5175; text-align:center; padding:20px;">No files uploaded for ${subject}</p>`;
-    else html += files.map((file, idx) => `
-        <div class="file-item"><div class="file-info"><i class="fas ${window.getFileIcon(file.name)}" style="color:${window.getFileColor(file.name)};"></i><div><div style="font-weight:500;">${file.name}</div><div style="font-size:0.75rem; color:#1f5175;">${window.formatFileSize(file.size)} · ${window.formatDateShort(file.uploadedAt)}</div></div></div>
-        <div class="file-actions"><button class="btn-preview" onclick="window.previewFile('${cat}','${subject}',${idx})"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="window.downloadFile('${cat}','${subject}',${idx})"><i class="fas fa-download"></i></button>${window.isAdminOrFaculty() ? `<button class="btn-delete" onclick="window.deleteFile('${cat}','${subject}',${idx})"><i class="fas fa-trash"></i></button>` : ''}</div></div>
-    `).join('');
+    if (files.length === 0) html += `<p style="color:#1f5175;text-align:center;padding:20px;">No files uploaded for ${subject}</p>`;
+    else html += files.map((file, idx) => `<div class="file-item"><div class="file-info"><i class="fas ${getFileIcon(file.name)}" style="color:${getFileColor(file.name)};"></i><div><div style="font-weight:500;">${file.name}</div><div style="font-size:0.75rem;color:#1f5175;">${formatFileSize(file.size)} · ${formatDateShort(file.uploadedAt)}</div></div></div><div class="file-actions"><button class="btn-preview" onclick="showFilePreview('${file.data}','${file.name}','${file.type||'application/pdf'}')"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="downloadFileFromPreview('${file.data}','${file.name}')"><i class="fas fa-download"></i></button></div></div>`).join('');
     html += `</div></div>`;
-    container.innerHTML = html;
-};
+    c.innerHTML = html;
+}
 
-// =============================================================
-// SUBJECT MATERIALS
-// =============================================================
-window.renderSubjectMaterials = function(container) {
-    const subjects = window.appData.subjectMaterials.subjects, files = window.appData.subjectMaterials.files || {};
-    let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-book-open" style="color:#0a4b78;"></i> Subject Materials</h2><div style="display:flex; gap:8px; flex-wrap:wrap;">${window.isAdminOrFaculty() ? `<button class="btn-success" onclick="window.addSMSubject()" style="padding:8px 16px;"><i class="fas fa-plus"></i> Add Subject</button>` : ''}<button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div></div><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">`;
+// ======================== SUBJECT MATERIALS ========================
+function renderSubjectMaterials(c) {
+    const subjects = appData.subjectMaterials.subjects;
+    const files = appData.subjectMaterials.files || {};
+    let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-book-open" style="color:#0a4b78;"></i> Subject Materials</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">`;
     subjects.forEach(subject => {
         const subjectFiles = files[subject] || [];
-        html += `<div class="category-card" onclick="window.viewSubjectMaterials('${subject}')">
-            <i class="fas fa-book" style="font-size:2rem; color:#0a4b78;"></i><h4>${subject}</h4><div class="file-count">${subjectFiles.length} files</div>
-            ${window.isAdminOrFaculty() ? `<div class="admin-actions"><button class="btn-outline" onclick="event.stopPropagation(); window.editSMSubject('${subject}')" style="padding:2px 10px; font-size:0.7rem;"><i class="fas fa-edit"></i></button><button class="btn-danger" onclick="event.stopPropagation(); window.deleteSMSubject('${subject}')" style="padding:2px 10px; font-size:0.7rem;"><i class="fas fa-trash"></i></button></div>` : ''}
-        </div>`;
+        html += `<div class="category-card" onclick="viewSubjectMaterials('${subject}')"><i class="fas fa-book" style="font-size:2rem;color:#0a4b78;"></i><h4>${subject}</h4><div class="file-count">${subjectFiles.length} files</div></div>`;
     });
     html += `</div></div>`;
-    container.innerHTML = html;
-};
+    c.innerHTML = html;
+}
 
-window.viewSubjectMaterials = function(subject) {
-    const container = document.getElementById('pageContainer');
-    const files = window.appData.subjectMaterials.files[subject] || [];
+function viewSubjectMaterials(subject) {
+    const c = document.getElementById('pageContainer');
+    const files = appData.subjectMaterials.files[subject] || [];
     let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-book" style="color:#0a4b78;"></i> ${subject}</h2><button class="close-btn" onclick="showPage('subjectMaterials')"><i class="fas fa-arrow-left"></i> Back</button></div><div class="file-list">`;
-    if (files.length === 0) html += `<p style="color:#1f5175; text-align:center; padding:20px;">No materials uploaded for ${subject}</p>`;
-    else html += files.map((file, idx) => `
-        <div class="file-item"><div class="file-info"><i class="fas ${window.getFileIcon(file.name)}" style="color:${window.getFileColor(file.name)};"></i><div><div style="font-weight:500;">${file.name}</div><div style="font-size:0.75rem; color:#1f5175;">${window.formatFileSize(file.size)} · ${window.formatDateShort(file.uploadedAt)}</div></div></div>
-        <div class="file-actions"><button class="btn-preview" onclick="window.previewSMFile('${subject}',${idx})"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="window.downloadSMFile('${subject}',${idx})"><i class="fas fa-download"></i></button>${window.isAdminOrFaculty() ? `<button class="btn-delete" onclick="window.deleteSMFile('${subject}',${idx})"><i class="fas fa-trash"></i></button>` : ''}</div></div>
-    `).join('');
+    if (files.length === 0) html += `<p style="color:#1f5175;text-align:center;padding:20px;">No materials uploaded for ${subject}</p>`;
+    else html += files.map((file, idx) => `<div class="file-item"><div class="file-info"><i class="fas ${getFileIcon(file.name)}" style="color:${getFileColor(file.name)};"></i><div><div style="font-weight:500;">${file.name}</div><div style="font-size:0.75rem;color:#1f5175;">${formatFileSize(file.size)} · ${formatDateShort(file.uploadedAt)}</div></div></div><div class="file-actions"><button class="btn-preview" onclick="showFilePreview('${file.data}','${file.name}','${file.type||'application/pdf'}')"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="downloadFileFromPreview('${file.data}','${file.name}')"><i class="fas fa-download"></i></button></div></div>`).join('');
     html += `</div></div>`;
-    container.innerHTML = html;
-};
+    c.innerHTML = html;
+}
 
-// =============================================================
-// FILE FUNCTIONS
-// =============================================================
-window.previewFile = function(cat, subject, idx) { const file = window.appData.questionPapers[cat].files[subject][idx]; if(file && file.data) window.showFilePreview(file.data, file.name, file.type); };
-window.previewSMFile = function(subject, idx) { const file = window.appData.subjectMaterials.files[subject][idx]; if(file && file.data) window.showFilePreview(file.data, file.name, file.type); };
-window.downloadFile = function(cat, subject, idx) { const file = window.appData.questionPapers[cat].files[subject][idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); window.logUserActivity(window.currentUsername,window.currentRole,'Download File',`Downloaded ${file.name}`); } };
-window.deleteFile = function(cat, subject, idx) { if(!window.isAdminOrFaculty()) { alert('Only admin and faculty can delete files'); return; } if(confirm('Delete this file?')) { const name = window.appData.questionPapers[cat].files[subject][idx].name; window.appData.questionPapers[cat].files[subject].splice(idx,1); window.saveData(window.appData); window.logUserActivity(window.currentUsername,window.currentRole,'Delete File',`Deleted ${name}`); window.viewQuestionPapers(cat,subject); } };
-window.downloadSMFile = function(subject, idx) { const file = window.appData.subjectMaterials.files[subject][idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); window.logUserActivity(window.currentUsername,window.currentRole,'Download File',`Downloaded ${file.name}`); } };
-window.deleteSMFile = function(subject, idx) { if(!window.isAdminOrFaculty()) { alert('Only admin and faculty can delete files'); return; } if(confirm('Delete this file?')) { const name = window.appData.subjectMaterials.files[subject][idx].name; window.appData.subjectMaterials.files[subject].splice(idx,1); window.saveData(window.appData); window.logUserActivity(window.currentUsername,window.currentRole,'Delete File',`Deleted ${name}`); window.viewSubjectMaterials(subject); } };
+// ======================== SEARCH ========================
+function renderSearchPage(c) {
+    c.innerHTML = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-search" style="color:#0a4b78;"></i> Search Documents</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
+        <div style="display:flex;gap:12px;margin-bottom:20px;"><input type="text" id="searchInput" class="login-input" placeholder="Search by filename or subject..." style="flex:1;" /><button class="btn-primary" onclick="performSearch()"><i class="fas fa-search"></i> Search</button></div>
+        <div id="searchResults"></div></div>`;
+}
 
-// =============================================================
-// APPROVALS
-// =============================================================
-window.submitApprovalRequest = function(category, cat, subject, files, fileDataArray) {
-    const request = { id: window.generateId(), category, cat: cat || null, subject, files: fileDataArray, requestedBy: window.currentUsername || 'anonymous', requestedAt: Date.now(), status: 'pending' };
-    if (!window.appData.approvalRequests) window.appData.approvalRequests = [];
-    window.appData.approvalRequests.push(request);
-    window.saveData(window.appData);
-    window.updatePendingBadge();
-    window.logUserActivity(window.currentUsername,window.currentRole,'Submit Approval Request',`Requested upload for ${subject}`);
-    window.showMessage('Request Submitted ✅', `Your upload request for "${subject}" has been sent to admin for approval.`);
-};
+function performSearch() {
+    const query = document.getElementById('searchInput').value.toLowerCase().trim();
+    const resultsDiv = document.getElementById('searchResults');
+    if (!query) { resultsDiv.innerHTML = '<p style="color:#1f5175;text-align:center;padding:20px;">Enter a search term</p>'; return; }
+    let results = [];
+    for (let cat in appData.questionPapers) {
+        const files = appData.questionPapers[cat].files || {};
+        for (let subject in files) files[subject].forEach(file => { if (file.name.toLowerCase().includes(query) || subject.toLowerCase().includes(query)) results.push({ name: file.name, subject, category: `Question Papers (${cat.toUpperCase()})`, size: file.size, data: file.data, type: file.type }); });
+    }
+    const smFiles = appData.subjectMaterials.files || {};
+    for (let subject in smFiles) smFiles[subject].forEach(file => { if (file.name.toLowerCase().includes(query) || subject.toLowerCase().includes(query)) results.push({ name: file.name, subject, category: 'Subject Materials', size: file.size, data: file.data, type: file.type }); });
+    if (results.length === 0) { resultsDiv.innerHTML = '<p style="color:#1f5175;text-align:center;padding:20px;">No results found</p>'; return; }
+    resultsDiv.innerHTML = `<div style="background:rgba(255,255,255,0.2);border-radius:24px;padding:16px;"><h4 style="color:#0a2b48;margin-bottom:12px;">Found ${results.length} results</h4>${results.map((file, idx) => `<div class="file-item"><div class="file-info"><i class="fas ${getFileIcon(file.name)}" style="color:${getFileColor(file.name)};"></i><div><div style="font-weight:500;">${file.name}</div><div style="font-size:0.75rem;color:#1f5175;">${file.category} · ${file.subject} · ${formatFileSize(file.size)}</div></div></div><div class="file-actions"><button class="btn-preview" onclick="showFilePreview('${file.data}','${file.name}','${file.type||'application/pdf'}')"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="downloadFileFromPreview('${file.data}','${file.name}')"><i class="fas fa-download"></i></button></div></div>`).join('')}</div>`;
+}
 
-window.renderApprovalsPage = function(container) {
-    const allRequests = window.appData.approvalRequests || [];
-    const pending = allRequests.filter(r => r.status === 'pending');
-    const approved = allRequests.filter(r => r.status === 'approved');
-    const rejected = allRequests.filter(r => r.status === 'rejected');
-    let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-clipboard-list" style="color:#0a4b78;"></i> Approval Requests</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
-        <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
-            <button class="btn-primary" onclick="window.showApprovalTab('pending')" id="pendingTab">⏳ Pending (${pending.length})</button>
-            <button class="btn-outline" onclick="window.showApprovalTab('approved')" id="approvedTab">✅ Approved (${approved.length})</button>
-            <button class="btn-outline" onclick="window.showApprovalTab('rejected')" id="rejectedTab">❌ Rejected (${rejected.length})</button>
-        </div>
-        <div id="approvalContent">${allRequests.length === 0 ? '<p style="color:#1f5175; text-align:center; padding:40px;">No approval requests yet</p>' : window.renderApprovalList('pending')}</div></div>`;
-    container.innerHTML = html;
-};
+// ======================== MY UPLOADS ========================
+function renderMyUploads(c) {
+    const userUploads = [];
+    for (let cat in appData.questionPapers) {
+        const files = appData.questionPapers[cat].files || {};
+        for (let subject in files) files[subject].forEach(file => { if (file.uploadedBy === currentUsername) userUploads.push({ fileName: file.name, category: 'Question Papers', subject, uploadedAt: file.uploadedAt, data: file.data, type: file.type }); });
+    }
+    const smFiles = appData.subjectMaterials.files || {};
+    for (let subject in smFiles) smFiles[subject].forEach(file => { if (file.uploadedBy === currentUsername) userUploads.push({ fileName: file.name, category: 'Subject Materials', subject, uploadedAt: file.uploadedAt, data: file.data, type: file.type }); });
+    userUploads.sort((a,b) => b.uploadedAt - a.uploadedAt);
+    let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-history" style="color:#0a4b78;"></i> My Uploads</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>`;
+    if (userUploads.length === 0) html += `<p style="color:#1f5175;text-align:center;padding:40px;">📭 No uploads found for ${currentUsername}</p>`;
+    else {
+        html += `<div class="file-list">${userUploads.map((item, idx) => `<div class="file-item"><div><div style="font-weight:500;">📄 ${item.fileName}</div><div style="font-size:0.75rem;color:#1f5175;">📂 ${item.category} · ${item.subject} · ${formatDateShort(item.uploadedAt)}</div></div><div class="file-actions"><button class="btn-preview" onclick="showFilePreview('${item.data}','${item.fileName}','${item.type||'application/pdf'}')"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="downloadFileFromPreview('${item.data}','${item.fileName}')"><i class="fas fa-download"></i></button></div></div>`).join('')}</div><p style="margin-top:12px;font-size:0.8rem;color:#1f5175;">Total: ${userUploads.length} file(s)</p>`);
+    }
+    html += `</div>`;
+    c.innerHTML = html;
+}
 
-window.showApprovalTab = function(tab) {
+// ======================== APPROVALS ========================
+let approvalRequests = [];
+
+function renderApprovalsPage(c) {
+    const pending = approvalRequests.filter(r => r.status === 'pending');
+    const approved = approvalRequests.filter(r => r.status === 'approved');
+    const rejected = approvalRequests.filter(r => r.status === 'rejected');
+    c.innerHTML = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-clipboard-list" style="color:#0a4b78;"></i> Approval Requests</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
+        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;"><button class="btn-primary" onclick="showApprovalTab('pending')" id="pendingTab">⏳ Pending (${pending.length})</button><button class="btn-outline" onclick="showApprovalTab('approved')" id="approvedTab">✅ Approved (${approved.length})</button><button class="btn-outline" onclick="showApprovalTab('rejected')" id="rejectedTab">❌ Rejected (${rejected.length})</button></div>
+        <div id="approvalContent">${approvalRequests.length === 0 ? '<p style="color:#1f5175;text-align:center;padding:40px;">No approval requests</p>' : renderApprovalList('pending')}</div></div>`;
+}
+
+function showApprovalTab(tab) {
     const content = document.getElementById('approvalContent');
     if (!content) return;
-    const pendingTab = document.getElementById('pendingTab');
-    const approvedTab = document.getElementById('approvedTab');
-    const rejectedTab = document.getElementById('rejectedTab');
-    if (pendingTab) pendingTab.className = tab === 'pending' ? 'btn-primary' : 'btn-outline';
-    if (approvedTab) approvedTab.className = tab === 'approved' ? 'btn-primary' : 'btn-outline';
-    if (rejectedTab) rejectedTab.className = tab === 'rejected' ? 'btn-primary' : 'btn-outline';
-    content.innerHTML = window.renderApprovalList(tab);
-};
+    document.getElementById('pendingTab').className = tab === 'pending' ? 'btn-primary' : 'btn-outline';
+    document.getElementById('approvedTab').className = tab === 'approved' ? 'btn-primary' : 'btn-outline';
+    document.getElementById('rejectedTab').className = tab === 'rejected' ? 'btn-primary' : 'btn-outline';
+    content.innerHTML = renderApprovalList(tab);
+}
 
-window.renderApprovalList = function(status) {
-    const requests = (window.appData.approvalRequests || []).filter(r => r.status === status);
-    if (requests.length === 0) return `<p style="color:#1f5175; text-align:center; padding:20px;">No ${status} requests</p>`;
-    return requests.map(req => {
-        const totalSize = req.files.reduce((s,f) => s + f.size, 0);
-        const fileNames = req.files.map(f => f.name).join(', ');
-        const requestedBy = req.requestedBy;
-        const email = window.getUserEmail(requestedBy);
-        const userName = window.getStoredUserName(requestedBy) || 'Not set';
-        return `<div class="approval-request ${status}">
-            <div class="request-info"><div class="request-title"><i class="fas fa-file-alt" style="color:#0a4b78;"></i> ${req.category} — ${req.subject} ${req.cat ? `· ${req.cat.toUpperCase()}` : ''}</div>
-            <div class="request-meta"><i class="fas fa-user" style="color:#0a4b78;"></i> ${requestedBy} ${userName!=='Not set' ? `(${userName})` : ''} ${email ? `<i class="fas fa-envelope" style="color:#0a4b78; margin-left:8px;"></i> ${email}` : ''}<br><i class="fas fa-clock" style="color:#0a4b78;"></i> ${window.formatDateTime(req.requestedAt)}</div></div>
-            <div class="request-details"><div><i class="fas fa-file"></i> <strong>Files:</strong> ${fileNames}</div><div style="margin-top:4px;"><i class="fas fa-weight-hanging"></i> <strong>Total Size:</strong> ${window.formatFileSize(totalSize)} · ${req.files.length} file(s)</div>${email ? `<div style="margin-top:4px;"><i class="fas fa-envelope"></i> <strong>Email:</strong> ${email}</div>` : `<div style="margin-top:4px; color:#dc3545;"><i class="fas fa-exclamation-triangle"></i> No email set</div>`}</div>
-            ${status === 'pending' && window.isAdmin() ? `<div class="request-actions"><button class="btn-preview-request" onclick="window.previewRequestFile('${req.id}',0)"><i class="fas fa-eye"></i> Preview</button><button class="btn-approve" onclick="window.approveRequest('${req.id}')"><i class="fas fa-check"></i> Approve</button><button class="btn-reject" onclick="window.rejectRequest('${req.id}')"><i class="fas fa-times"></i> Reject</button></div>` : ''}
-            ${status === 'pending' ? `<div style="margin-top:12px;"><span class="pending-badge">⏳ Pending</span></div>` : ''}
-            ${status === 'approved' ? `<div style="margin-top:12px;"><span class="status-badge approved-badge">✅ Approved</span></div>` : ''}
-            ${status === 'rejected' ? `<div style="margin-top:12px;"><span class="status-badge rejected-badge">❌ Rejected</span></div>` : ''}
-        </div>`;
-    }).join('');
-};
+function renderApprovalList(status) {
+    const requests = approvalRequests.filter(r => r.status === status);
+    if (requests.length === 0) return `<p style="color:#1f5175;text-align:center;padding:20px;">No ${status} requests</p>`;
+    return requests.map(req => `<div class="approval-request ${status}">
+        <div class="request-info"><div class="request-title"><i class="fas fa-file-alt" style="color:#0a4b78;"></i> ${req.category} — ${req.subject}</div>
+        <div class="request-meta"><i class="fas fa-user" style="color:#0a4b78;"></i> ${req.requestedBy}<br><i class="fas fa-clock" style="color:#0a4b78;"></i> ${formatDateTime(req.requestedAt)}</div></div>
+        <div class="request-details"><div><i class="fas fa-file"></i> <strong>Files:</strong> ${req.files ? req.files.map(f => f.name).join(', ') : 'No files'}</div></div>
+        ${status === 'pending' && currentRole === 'admin' ? `<div class="request-actions"><button class="btn-approve" onclick="approveRequest('${req.id}')"><i class="fas fa-check"></i> Approve</button><button class="btn-reject" onclick="rejectRequest('${req.id}')"><i class="fas fa-times"></i> Reject</button></div>` : ''}
+        ${status === 'pending' ? `<div style="margin-top:12px;"><span class="pending-badge">⏳ Pending</span></div>` : ''}
+        ${status === 'approved' ? `<div style="margin-top:12px;"><span class="status-badge approved-badge">✅ Approved</span></div>` : ''}
+        ${status === 'rejected' ? `<div style="margin-top:12px;"><span class="status-badge rejected-badge">❌ Rejected</span></div>` : ''}
+    </div>`).join('');
+}
 
-window.previewRequestFile = function(requestId, fileIndex) {
-    const request = (window.appData.approvalRequests || []).find(r => r.id === requestId);
-    if (!request) return;
-    const file = request.files[fileIndex];
-    if (!file) return;
-    window.showFilePreview(file.data, file.name, file.type);
-};
-
-window.approveRequest = function(requestId) {
-    const request = (window.appData.approvalRequests || []).find(r => r.id === requestId);
-    if (!request) { window.showMessage('Error', 'Request not found.'); return; }
-    if (!confirm(`Approve upload request for "${request.subject}"?`)) return;
-    try {
-        request.status = 'approved';
-        if (request.category === 'Question Papers') {
-            const cat = request.cat, subject = request.subject;
-            if (!cat || !window.appData.questionPapers[cat]) throw new Error('Invalid category');
-            if (!window.appData.questionPapers[cat].files[subject]) window.appData.questionPapers[cat].files[subject] = [];
-            request.files.forEach(file => {
-                const fileData = { id: window.generateId(), name: file.name, size: file.size, type: file.type, data: file.data, uploadedAt: Date.now(), uploadedBy: request.requestedBy };
-                window.appData.questionPapers[cat].files[subject].push(fileData);
-                window.appData.uploadHistory.push({ fileName: file.name, category: 'Question Papers', subject, uploadedAt: Date.now(), uploadedBy: request.requestedBy });
+function approveRequest(id) {
+    const req = approvalRequests.find(r => r.id === id);
+    if (!req) { showMessage('Error', 'Request not found.'); return; }
+    if (!confirm(`Approve "${req.subject}"?`)) return;
+    req.status = 'approved';
+    // Move to files
+    const category = req.category === 'Question Papers' ? 'questionPapers' : 'subjectMaterials';
+    const catKey = req.category === 'Question Papers' ? req.cat : null;
+    const target = catKey ? appData.questionPapers[catKey] : appData.subjectMaterials;
+    if (!target.files[req.subject]) target.files[req.subject] = [];
+    if (req.files) {
+        req.files.forEach(file => {
+            target.files[req.subject].push({
+                id: generateId(),
+                name: file.name,
+                size: file.size || 0,
+                type: file.type || 'application/pdf',
+                data: file.data || file.url,
+                uploadedAt: Date.now(),
+                uploadedBy: req.requestedBy
             });
-        } else if (request.category === 'Subject Materials') {
-            const subject = request.subject;
-            if (!window.appData.subjectMaterials.files[subject]) window.appData.subjectMaterials.files[subject] = [];
-            request.files.forEach(file => {
-                const fileData = { id: window.generateId(), name: file.name, size: file.size, type: file.type, data: file.data, uploadedAt: Date.now(), uploadedBy: request.requestedBy };
-                window.appData.subjectMaterials.files[subject].push(fileData);
-                window.appData.uploadHistory.push({ fileName: file.name, category: 'Subject Materials', subject, uploadedAt: Date.now(), uploadedBy: request.requestedBy });
-            });
-        } else throw new Error('Unknown category');
-        if (!window.appData.approvedRequests) window.appData.approvedRequests = [];
-        window.appData.approvedRequests.push(request);
-        window.saveData(window.appData);
-        window.updatePendingBadge();
-        window.logUserActivity(window.currentUsername,window.currentRole,'Approve Request',`Approved ${request.subject}`);
-        window.showMessage('✅ Approved', `Request for "${request.subject}" approved.`);
-        window.renderApprovalsPage(document.getElementById('pageContainer'));
-    } catch(e) { window.showMessage('Error', 'Failed to approve: ' + e.message); }
-};
+        });
+    }
+    localStorage.setItem('mediVaultData', JSON.stringify(appData));
+    // Sync to Firebase
+    if (window.approvePendingUpload) window.approvePendingUpload(id, req);
+    showMessage('✅ Approved', `Request for "${req.subject}" approved.`);
+    renderApprovalsPage(document.getElementById('pageContainer'));
+    updatePendingBadge();
+}
 
-window.rejectRequest = function(requestId) {
-    const request = (window.appData.approvalRequests || []).find(r => r.id === requestId);
-    if (!request) { window.showMessage('Error', 'Request not found.'); return; }
-    if (!confirm(`Reject upload request for "${request.subject}"?`)) return;
-    try {
-        request.status = 'rejected';
-        window.saveData(window.appData);
-        window.updatePendingBadge();
-        window.logUserActivity(window.currentUsername,window.currentRole,'Reject Request',`Rejected ${request.subject}`);
-        window.showMessage('❌ Rejected', `Request for "${request.subject}" rejected.`);
-        window.renderApprovalsPage(document.getElementById('pageContainer'));
-    } catch(e) { window.showMessage('Error', 'Failed to reject: ' + e.message); }
-};
+function rejectRequest(id) {
+    const req = approvalRequests.find(r => r.id === id);
+    if (!req) { showMessage('Error', 'Request not found.'); return; }
+    if (!confirm(`Reject "${req.subject}"?`)) return;
+    req.status = 'rejected';
+    localStorage.setItem('mediVaultData', JSON.stringify(appData));
+    if (window.rejectPendingUpload) window.rejectPendingUpload(id, req);
+    showMessage('❌ Rejected', `Request for "${req.subject}" rejected.`);
+    renderApprovalsPage(document.getElementById('pageContainer'));
+    updatePendingBadge();
+}
 
-// =============================================================
-// UPLOAD PAGE
-// =============================================================
-window.renderUploadPage = function(container) {
-    const cats = ['cat1','cat2','cat3'], catNames = { cat1:'CAT-1', cat2:'CAT-2', cat3:'CAT-3 (Optional)' };
+function updatePendingBadge() {
+    const pending = approvalRequests.filter(r => r.status === 'pending').length;
+    const badge = document.getElementById('pendingCount');
+    if (badge) {
+        if (pending > 0 && currentRole === 'admin') {
+            badge.style.display = 'flex';
+            badge.textContent = pending;
+        } else badge.style.display = 'none';
+    }
+}
+
+// ======================== UPLOAD ========================
+function renderUploadPage(c) {
+    const cats = ['cat1','cat2','cat3'];
+    const catNames = { cat1:'CAT-1', cat2:'CAT-2', cat3:'CAT-3 (Optional)' };
     let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-cloud-upload-alt" style="color:#0a4b78;"></i> Upload Files</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
-        <div style="display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
-            <button class="${window.uploadCategory === 'questionPapers' ? 'btn-primary' : 'btn-outline'}" onclick="window.setUploadCategory('questionPapers')"><i class="fas fa-file-pdf"></i> Question Papers</button>
-            <button class="${window.uploadCategory === 'subjectMaterials' ? 'btn-primary' : 'btn-outline'}" onclick="window.setUploadCategory('subjectMaterials')"><i class="fas fa-book-open"></i> Subject Materials</button>
+        <div style="margin-bottom:16px;padding:12px;background:rgba(255,193,7,0.15);border-radius:12px;border-left:4px solid #ffc107;">
+            <p style="color:#856404;font-size:0.9rem;"><i class="fas fa-info-circle"></i> <strong>${currentRole === 'admin' ? 'Admin Upload:' : 'Upload Process:'}</strong> ${currentRole === 'admin' ? 'Files are published immediately.' : 'Files require admin approval before publishing.'}</p>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+            <button class="${uploadCategory === 'questionPapers' ? 'btn-primary' : 'btn-outline'}" onclick="setUploadCategory('questionPapers')"><i class="fas fa-file-pdf"></i> Question Papers</button>
+            <button class="${uploadCategory === 'subjectMaterials' ? 'btn-primary' : 'btn-outline'}" onclick="setUploadCategory('subjectMaterials')"><i class="fas fa-book-open"></i> Subject Materials</button>
         </div>
         <div id="uploadOptions">`;
-    if (window.uploadCategory === 'questionPapers') {
-        html += `<div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Category:</label><select class="subject-select" id="uploadCatSelect" onchange="window.updateUploadCat()">${cats.map(c => `<option value="${c}">${catNames[c]}</option>`).join('')}</select></div>
-            <div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Subject:</label><select class="subject-select" id="uploadSubjectSelect">${window.appData.questionPapers.cat1.subjects.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>
-            <p style="color:#1f5175; font-size:0.85rem;"><i class="fas fa-info-circle"></i> Images & PDFs accepted.</p>
-            <p style="color:#0a4b78; font-size:0.8rem; margin-top:4px;"><i class="fas fa-database"></i> Files will be saved to Firebase + Supabase</p>`;
+    if (uploadCategory === 'questionPapers') {
+        html += `<div style="margin:16px 0;"><label style="font-weight:500;display:block;margin-bottom:8px;">Select Category:</label><select class="subject-select" id="uploadCatSelect" onchange="updateUploadCat()">${cats.map(c => `<option value="${c}">${catNames[c]}</option>`).join('')}</select></div>
+            <div style="margin:16px 0;"><label style="font-weight:500;display:block;margin-bottom:8px;">Select Subject:</label><select class="subject-select" id="uploadSubjectSelect">${appData.questionPapers.cat1.subjects.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>`;
     } else {
-        html += `<div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Subject:</label><select class="subject-select" id="uploadSMSubjectSelect">${window.appData.subjectMaterials.subjects.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>
-            <p style="color:#1f5175; font-size:0.85rem;"><i class="fas fa-info-circle"></i> PDF and documents accepted.</p>
-            <p style="color:#0a4b78; font-size:0.8rem; margin-top:4px;"><i class="fas fa-database"></i> Files will be saved to Firebase + Supabase</p>`;
+        html += `<div style="margin:16px 0;"><label style="font-weight:500;display:block;margin-bottom:8px;">Select Subject:</label><select class="subject-select" id="uploadSMSubjectSelect">${appData.subjectMaterials.subjects.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>`;
     }
     html += `</div>
-        <div class="file-upload-area" id="dropZone"><i class="fas fa-cloud-upload-alt" style="font-size:3rem; color:#0a4b78;"></i><p style="margin:12px 0; color:#1f5175;">📁 Drag & drop or click to browse</p><input type="file" id="fileInput" multiple style="display:none;" /><button class="btn-primary" onclick="document.getElementById('fileInput').click()"><i class="fas fa-folder-open"></i> Browse Files</button></div>
+        <div class="file-upload-area" id="dropZone"><i class="fas fa-cloud-upload-alt" style="font-size:3rem;color:#0a4b78;"></i><p style="margin:12px 0;color:#1f5175;">📁 Drag & drop or click to browse</p><input type="file" id="fileInput" multiple style="display:none;" /><button class="btn-primary" onclick="document.getElementById('fileInput').click()"><i class="fas fa-folder-open"></i> Browse Files</button></div>
         <div id="uploadStatus" style="margin-top:12px;"></div>
-        <div id="uploadProgress" style="display:none; margin-top:12px;"><div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#1f5175;"><span id="uploadFileName">Preparing...</span><span id="progressText">0%</span></div><div class="upload-progress"><div class="upload-progress-bar" id="progressBar" style="width:0%;"></div></div></div>
-        <div id="uploadQueueContainer" style="margin-top:12px;"><div id="uploadQueueInfo" style="display:none;"><p style="font-size:0.85rem; color:#1f5175; margin-bottom:8px;"><i class="fas fa-list"></i> <span id="queueCount">0</span> files in queue</p><div id="queueItems"></div></div></div></div>`;
-    container.innerHTML = html;
+        <div id="uploadProgress" style="display:none;margin-top:12px;"><div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#1f5175;"><span id="uploadFileName">Preparing...</span><span id="progressText">0%</span></div><div class="upload-progress"><div class="upload-progress-bar" id="progressBar" style="width:0%;"></div></div></div></div>`;
+    c.innerHTML = html;
     
     const fileInput = document.getElementById('fileInput');
     if (fileInput) {
-        fileInput.removeEventListener('change', window.handleFileUpload);
-        fileInput.addEventListener('change', window.handleFileUpload);
+        fileInput.removeEventListener('change', handleUpload);
+        fileInput.addEventListener('change', handleUpload);
     }
-    
     const dz = document.getElementById('dropZone');
     if (dz) {
         dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
         dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-        dz.addEventListener('drop', e => { 
-            e.preventDefault(); 
-            dz.classList.remove('dragover'); 
-            if(e.dataTransfer.files.length > 0) { 
-                const fileInput = document.getElementById('fileInput');
-                if (fileInput) {
-                    fileInput.files = e.dataTransfer.files;
-                    fileInput.dispatchEvent(new Event('change'));
-                }
-            } 
-        });
+        dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); if(e.dataTransfer.files.length) { const input = document.getElementById('fileInput'); if(input) { input.files = e.dataTransfer.files; input.dispatchEvent(new Event('change')); } } });
     }
-};
+}
 
-window.setUploadCategory = function(category) { window.uploadCategory = category; window.renderUploadPage(document.getElementById('pageContainer')); };
-
-window.updateUploadCat = function() {
+function setUploadCategory(cat) { uploadCategory = cat; renderUploadPage(document.getElementById('pageContainer')); }
+function updateUploadCat() {
     const cat = document.getElementById('uploadCatSelect');
     const sel = document.getElementById('uploadSubjectSelect');
     if (!cat || !sel) return;
-    const value = cat.value;
-    sel.innerHTML = window.appData.questionPapers[value].subjects.map(s => `<option value="${s}">${s}</option>`).join('');
-};
+    sel.innerHTML = appData.questionPapers[cat.value].subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+}
 
-// =============================================================
-// MAIN UPLOAD HANDLER - SUPABASE INTEGRATION
-// =============================================================
-window.handleFileUpload = async function(event) {
+async function handleUpload(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
     
     let subject = '';
-    if (window.uploadCategory === 'questionPapers') {
-        const subjectSelect = document.getElementById('uploadSubjectSelect');
-        if (subjectSelect) subject = subjectSelect.value;
+    if (uploadCategory === 'questionPapers') {
+        const sel = document.getElementById('uploadSubjectSelect');
+        if (sel) subject = sel.value;
     } else {
-        const subjectSelect = document.getElementById('uploadSMSubjectSelect');
-        if (subjectSelect) subject = subjectSelect.value;
+        const sel = document.getElementById('uploadSMSubjectSelect');
+        if (sel) subject = sel.value;
     }
-    
     if (!subject) {
-        const statusDiv = document.getElementById('uploadStatus');
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please select a subject.</div>`;
-        return;
-    }
-    
-    if (!supabaseClient) {
-        const statusDiv = document.getElementById('uploadStatus');
-        if(statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Supabase not initialized. Please refresh.</div>`;
+        document.getElementById('uploadStatus').innerHTML = `<div style="color:#dc3545;padding:12px;background:rgba(220,53,69,0.1);border-radius:12px;">Select a subject first.</div>`;
         return;
     }
     
@@ -1853,11 +1284,12 @@ window.handleFileUpload = async function(event) {
     if(progressDiv) progressDiv.style.display = 'block';
     if(progressBar) progressBar.style.width = '0%';
     if(progressText) progressText.textContent = '0%';
-    if(fileNameDisplay) fileNameDisplay.textContent = `Uploading to Supabase...`;
+    if(fileNameDisplay) fileNameDisplay.textContent = `Processing...`;
     
     let completed = 0;
     const total = files.length;
     let successCount = 0;
+    const uploaded = [];
     
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -1867,287 +1299,251 @@ window.handleFileUpload = async function(event) {
         }
         
         try {
-            const result = await uploadFileToSupabase(file, subject, window.currentUsername || 'anonymous');
+            if(fileNameDisplay) fileNameDisplay.textContent = `Uploading ${file.name} (${i+1}/${total})...`;
             
-            if (result.success) {
-                successCount++;
-                // Add to local app data
-                const cat = document.getElementById('uploadCatSelect')?.value || 'cat1';
-                if (!window.appData.questionPapers[cat].files[subject]) {
-                    window.appData.questionPapers[cat].files[subject] = [];
+            // Upload to Supabase Storage
+            let fileUrl = '';
+            let storagePath = '';
+            if (window.SB) {
+                const result = await window.uploadToSupabaseStorage(file);
+                if (result.success) {
+                    fileUrl = result.url;
+                    storagePath = result.path;
+                } else {
+                    throw new Error(result.error);
                 }
-                window.appData.questionPapers[cat].files[subject].push({
-                    id: result.fileId,
+            } else {
+                // Fallback: use FileReader for local storage
+                const reader = new FileReader();
+                fileUrl = await new Promise((resolve, reject) => {
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+            
+            const fileData = {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                data: fileUrl,
+                storagePath: storagePath,
+                uploadedBy: currentUsername || 'anonymous',
+                uploadedAt: Date.now()
+            };
+            
+            uploaded.push(fileData);
+            
+            if (currentRole === 'admin') {
+                // Admin uploads directly
+                const cat = document.getElementById('uploadCatSelect')?.value || 'cat1';
+                const target = uploadCategory === 'questionPapers' ? appData.questionPapers[cat] : appData.subjectMaterials;
+                if (!target.files[subject]) target.files[subject] = [];
+                target.files[subject].push({
+                    id: generateId(),
                     name: file.name,
                     size: file.size,
                     type: file.type,
-                    data: result.url,
+                    data: fileUrl,
                     uploadedAt: Date.now(),
-                    uploadedBy: window.currentUsername || 'anonymous'
+                    uploadedBy: currentUsername
                 });
-                window.appData.uploadHistory.push({ 
-                    fileName: file.name, 
-                    category: window.uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials', 
-                    subject, 
-                    uploadedAt: Date.now(), 
-                    uploadedBy: window.currentUsername || 'anonymous' 
-                });
+                appData.uploadHistory.push({ fileName: file.name, category: uploadCategory, subject, uploadedAt: Date.now(), uploadedBy: currentUsername });
+                successCount++;
             }
+            
         } catch (e) {
             console.error('Upload error:', e);
         }
-        
         completed++;
         const progress = Math.round((completed / total) * 100);
         if(progressBar) progressBar.style.width = progress + '%';
         if(progressText) progressText.textContent = progress + '%';
-        if(fileNameDisplay) fileNameDisplay.textContent = `${completed}/${total} files processed`;
     }
     
-    window.saveData(window.appData);
-    window.updateCounts();
-    window.updatePendingBadge();
+    if (currentRole !== 'admin' && uploaded.length > 0) {
+        // Submit for approval
+        const req = {
+            id: generateId(),
+            category: uploadCategory === 'questionPapers' ? 'Question Papers' : 'Subject Materials',
+            cat: uploadCategory === 'questionPapers' ? document.getElementById('uploadCatSelect')?.value : null,
+            subject: subject,
+            files: uploaded,
+            requestedBy: currentUsername || 'anonymous',
+            requestedAt: Date.now(),
+            status: 'pending'
+        };
+        approvalRequests.push(req);
+        localStorage.setItem('mediVaultData', JSON.stringify(appData));
+        if (window.submitPendingUpload) window.submitPendingUpload(req);
+        statusDiv.innerHTML = `<div style="color:#ffc107;padding:12px;background:rgba(255,193,7,0.1);border-radius:12px;"><i class="fas fa-clock"></i> ${uploaded.length} file(s) submitted for approval.</div>`;
+    } else if (successCount > 0) {
+        localStorage.setItem('mediVaultData', JSON.stringify(appData));
+        statusDiv.innerHTML = `<div style="color:#28a745;padding:12px;background:rgba(40,167,69,0.1);border-radius:12px;"><i class="fas fa-check-circle"></i> ${successCount} file(s) uploaded successfully!</div>`;
+    } else {
+        statusDiv.innerHTML = `<div style="color:#dc3545;padding:12px;background:rgba(220,53,69,0.1);border-radius:12px;">Upload failed. Please try again.</div>`;
+    }
     
     if(progressDiv) progressDiv.style.display = 'none';
-    if(statusDiv) {
-        if (successCount === total) {
-            statusDiv.innerHTML = `<div style="color:#28a745; padding:12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> ✅ ${successCount}/${total} files uploaded successfully to Firebase + Supabase!</div>`;
-        } else if (successCount > 0) {
-            statusDiv.innerHTML = `<div style="color:#ffc107; padding:12px; background:rgba(255,193,7,0.1); border-radius:12px;"><i class="fas fa-exclamation-triangle"></i> ⚠️ ${successCount}/${total} files uploaded. Some failed.</div>`;
-        } else {
-            statusDiv.innerHTML = `<div style="color:#dc3545; padding:12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-times-circle"></i> ❌ All ${total} files failed to upload.</div>`;
-        }
-    }
-    
-    setTimeout(() => window.refreshCurrentPage(), 1000);
+    updateCounts();
+    updatePendingBadge();
     event.target.value = '';
-};
+}
 
-// =============================================================
-// SEARCH
-// =============================================================
-window.renderSearchPage = function(container) {
-    container.innerHTML = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-search" style="color:#0a4b78;"></i> Search Documents</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
-        <div style="display:flex; gap:12px; margin-bottom:20px;"><input type="text" id="searchInput" class="login-input" placeholder="Search by filename or subject..." style="flex:1;" /><button class="btn-primary" onclick="window.performSearch()"><i class="fas fa-search"></i> Search</button></div>
-        <div id="searchResults"></div></div>`;
-};
-
-window.performSearch = function() {
-    const searchInput = document.getElementById('searchInput');
-    if (!searchInput) return;
-    const query = searchInput.value.toLowerCase().trim();
-    const resultsDiv = document.getElementById('searchResults');
-    if (!resultsDiv) return;
-    if (!query) { resultsDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:20px;">Enter a search term</p>'; return; }
-    let results = [];
-    for (let cat in window.appData.questionPapers) {
-        const files = window.appData.questionPapers[cat].files || {};
-        for (let subject in files) files[subject].forEach(file => { if (file.name.toLowerCase().includes(query) || subject.toLowerCase().includes(query)) results.push({ name: file.name, subject, category: `Question Papers (${cat.toUpperCase()})`, size: file.size, uploadedAt: file.uploadedAt, data: file.data, type: file.type }); });
+function updateCounts() {
+    let qp=0, sm=0;
+    for (let cat in appData.questionPapers) {
+        const files = appData.questionPapers[cat].files || {};
+        for (let s in files) qp += files[s].length;
     }
-    const smFiles = window.appData.subjectMaterials.files || {};
-    for (let subject in smFiles) smFiles[subject].forEach(file => { if (file.name.toLowerCase().includes(query) || subject.toLowerCase().includes(query)) results.push({ name: file.name, subject, category: 'Subject Materials', size: file.size, uploadedAt: file.uploadedAt, data: file.data, type: file.type }); });
-    if (results.length === 0) { resultsDiv.innerHTML = '<p style="color:#1f5175; text-align:center; padding:20px;">No results found</p>'; return; }
-    resultsDiv.innerHTML = `<div style="background:rgba(255,255,255,0.2); border-radius:24px; padding:16px;"><h4 style="color:#0a2b48; margin-bottom:12px;">Found ${results.length} results</h4>${results.map((file, idx) => `
-        <div class="file-item"><div class="file-info"><i class="fas ${window.getFileIcon(file.name)}" style="color:${window.getFileColor(file.name)};"></i><div><div style="font-weight:500;">${file.name}</div><div style="font-size:0.75rem; color:#1f5175;">${file.category} · ${file.subject} · ${window.formatFileSize(file.size)}</div></div></div>
-        <div class="file-actions"><button class="btn-preview" onclick="window.previewSearchResult(${idx})"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="window.downloadSearchResult(${idx})"><i class="fas fa-download"></i></button></div></div>
-    `).join('')}</div>`;
-    window._searchResults = results;
-};
+    const smFiles = appData.subjectMaterials.files || {};
+    for (let s in smFiles) sm += smFiles[s].length;
+    const qpEl = document.getElementById('qpCount');
+    const smEl = document.getElementById('smCount');
+    if (qpEl) qpEl.textContent = qp + ' files';
+    if (smEl) smEl.textContent = sm + ' files';
+}
 
-window.previewSearchResult = function(idx) { const file = window._searchResults[idx]; if(file && file.data) window.showFilePreview(file.data, file.name, file.type); };
-window.downloadSearchResult = function(idx) { const file = window._searchResults[idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); } };
+// ======================== LOGIN ========================
+const tabBtns = document.querySelectorAll('.tab-btn');
+const forms = { student: document.getElementById('studentForm'), faculty: document.getElementById('facultyForm'), admin: document.getElementById('adminForm') };
+tabBtns.forEach(btn => btn.addEventListener('click', function() {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    Object.keys(forms).forEach(key => { if (forms[key]) forms[key].classList.toggle('active', key === this.dataset.tab); });
+}));
 
-// =============================================================
-// MY UPLOADS
-// =============================================================
-window.renderMyUploads = function(container) {
-    const userUploads = [];
-    for (let cat in window.appData.questionPapers) {
-        const files = window.appData.questionPapers[cat].files || {};
-        for (let subject in files) files[subject].forEach(file => { if (file.uploadedBy === window.currentUsername) userUploads.push({ fileName: file.name, category: 'Question Papers', subject, uploadedAt: file.uploadedAt, data: file.data, type: file.type }); });
-    }
-    const smFiles = window.appData.subjectMaterials.files || {};
-    for (let subject in smFiles) smFiles[subject].forEach(file => { if (file.uploadedBy === window.currentUsername) userUploads.push({ fileName: file.name, category: 'Subject Materials', subject, uploadedAt: file.uploadedAt, data: file.data, type: file.type }); });
-    userUploads.sort((a,b) => b.uploadedAt - a.uploadedAt);
-    let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-history" style="color:#0a4b78;"></i> My Uploads</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>`;
-    if (userUploads.length === 0) html += `<p style="color:#1f5175; text-align:center; padding:40px;">📭 No uploads found for ${window.currentUsername}</p>`;
-    else {
-        html += `<div class="file-list">${userUploads.map((item, idx) => `
-            <div class="file-item"><div><div style="font-weight:500;">📄 ${item.fileName}</div><div style="font-size:0.75rem; color:#1f5175;">📂 ${item.category} · ${item.subject} · ${window.formatDateShort(item.uploadedAt)}</div></div>
-            <div class="file-actions"><button class="btn-preview" onclick="window.previewMyUpload(${idx})"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="window.downloadMyUpload(${idx})"><i class="fas fa-download"></i></button></div></div>
-        `).join('')}</div><p style="margin-top:12px; font-size:0.8rem; color:#1f5175;">Total: ${userUploads.length} file(s)</p>`;
-    }
-    html += `</div>`;
-    container.innerHTML = html;
-    window._userUploads = userUploads;
-};
-
-window.previewMyUpload = function(idx) { const file = window._userUploads[idx]; if(file && file.data) window.showFilePreview(file.data, file.fileName, file.type); };
-window.downloadMyUpload = function(idx) { const file = window._userUploads[idx]; if(file && file.data) { const a=document.createElement('a'); a.href=file.data; a.download=file.fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); } };
-
-// =============================================================
-// LOGIN HANDLING
-// =============================================================
-document.getElementById('studentForm').addEventListener('submit', async function(e) {
+document.getElementById('studentForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const username = document.getElementById('studentUsername').value.trim();
     const password = document.getElementById('studentPassword').value.trim();
     const match = username.match(/^732925MDR(\d{3})$/);
-    if (!match || parseInt(match[1]) < 1 || parseInt(match[1]) > 63) {
-        alert('Invalid register number. Must be 732925MDR001-063');
-        return;
-    }
-    if (!password || !window.isValidDate(password)) {
-        alert('Invalid password. Use DD/MM/YYYY');
-        return;
-    }
-    
-    // Check if user exists
-    const profile = await getUserProfile(username);
-    if (!profile) {
-        const name = prompt('Welcome! Enter your full name:', 'John Doe');
-        if (name && name.trim()) {
-            await saveUserProfile(username, { name: name.trim(), createdAt: Date.now() });
-        } else {
-            alert('Name is required to continue.');
-            return;
-        }
-    }
-    
-    attachProfileListener(username);
-    window.currentUsername = username;
-    window.currentRole = 'student';
-    document.getElementById('loginPage').classList.add('hidden');
-    document.getElementById('dashboardPage').classList.remove('hidden');
-    
-    const display = document.getElementById('greetingUser');
-    if (display) display.textContent = username + ' (Student)';
-    
-    const nameDisplay = document.getElementById('userNameDisplay');
-    if (nameDisplay) {
-        const profileData = await getUserProfile(username);
-        if (profileData && profileData.name) {
-            nameDisplay.textContent = profileData.name;
-            window.setStoredUserName(username, profileData.name);
-        }
-    }
-    
-    attachFileListener();
-    window.loadUserAvatar(username);
-    window.updateCounts();
-    window.updatePendingBadge();
-    console.log('✅ Logged in as:', username);
+    if (!match || parseInt(match[1]) < 1 || parseInt(match[1]) > 63) { alert('Invalid register number. Must be 732925MDR001-063'); return; }
+    if (!password || !isValidDate(password)) { alert('Invalid password. Use DD/MM/YYYY'); return; }
+    loginUser(username, password, 'student');
 });
 
-document.getElementById('facultyForm').addEventListener('submit', async function(e) {
+document.getElementById('facultyForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const username = document.getElementById('facultyUsername').value.trim();
     const password = document.getElementById('facultyPassword').value.trim();
     const parts = username.split(' ');
-    if (parts.length < 2 || parts.some(p => !p.match(/^[A-Z]+$/))) {
-        alert('Faculty name: All caps with spaces (e.g., SANJAY R)');
-        return;
-    }
-    if (!password || !window.isValidDate(password)) {
-        alert('Invalid password. Use DD/MM/YYYY');
-        return;
-    }
-    
-    const profile = await getUserProfile(username);
-    if (!profile) {
-        const name = prompt('Welcome! Enter your full name:', 'John Doe');
-        if (name && name.trim()) {
-            await saveUserProfile(username, { name: name.trim(), createdAt: Date.now() });
-        } else {
-            alert('Name is required to continue.');
-            return;
-        }
-    }
-    
-    attachProfileListener(username);
-    window.currentUsername = username;
-    window.currentRole = 'faculty';
-    document.getElementById('loginPage').classList.add('hidden');
-    document.getElementById('dashboardPage').classList.remove('hidden');
-    
-    const display = document.getElementById('greetingUser');
-    if (display) display.textContent = username + ' (Faculty)';
-    
-    const nameDisplay = document.getElementById('userNameDisplay');
-    if (nameDisplay) {
-        const profileData = await getUserProfile(username);
-        if (profileData && profileData.name) {
-            nameDisplay.textContent = profileData.name;
-            window.setStoredUserName(username, profileData.name);
-        }
-    }
-    
-    attachFileListener();
-    window.loadUserAvatar(username);
-    window.updateCounts();
-    window.updatePendingBadge();
-    console.log('✅ Logged in as:', username);
+    if (parts.length < 2 || parts.some(p => !p.match(/^[A-Z]+$/))) { alert('Faculty name: All caps with spaces (e.g., SANJAY R)'); return; }
+    if (!password || !isValidDate(password)) { alert('Invalid password. Use DD/MM/YYYY'); return; }
+    loginUser(username, password, 'faculty');
 });
 
-document.getElementById('adminForm').addEventListener('submit', async function(e) {
+document.getElementById('adminForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const username = document.getElementById('adminUsername').value.trim();
     const password = document.getElementById('adminPassword').value.trim();
-    
     if (username === '732925MDR049' && password === 'MDR2008') {
-        const profile = await getUserProfile(username);
-        if (!profile) {
-            await saveUserProfile(username, { name: 'Admin', createdAt: Date.now() });
-        }
-        attachProfileListener(username);
-        window.currentUsername = username;
-        window.currentRole = 'admin';
-        document.getElementById('loginPage').classList.add('hidden');
-        document.getElementById('dashboardPage').classList.remove('hidden');
-        
-        const display = document.getElementById('greetingUser');
-        if (display) display.textContent = 'Admin';
-        
-        const nameDisplay = document.getElementById('userNameDisplay');
-        if (nameDisplay) {
-            const profileData = await getUserProfile(username);
-            if (profileData && profileData.name) {
-                nameDisplay.textContent = profileData.name;
-                window.setStoredUserName(username, profileData.name);
-            }
-        }
-        
-        attachFileListener();
-        window.loadUserAvatar(username);
-        window.updateCounts();
-        window.updatePendingBadge();
-        console.log('✅ Logged in as Admin');
-    } else {
-        alert('Invalid admin credentials');
+        loginUser(username, password, 'admin');
+    } else alert('Invalid admin credentials');
+});
+
+function loginUser(username, password, role) {
+    // Check if user exists in localStorage
+    let users = JSON.parse(localStorage.getItem('mediVaultUsers') || '{}');
+    if (!users[username]) {
+        const name = prompt('Welcome! Enter your full name:', 'John Doe');
+        if (!name || !name.trim()) { alert('Name is required.'); return; }
+        users[username] = { password: password, role: role, registeredAt: Date.now() };
+        localStorage.setItem('mediVaultUsers', JSON.stringify(users));
+        localStorage.setItem('userName_' + username, name.trim());
+        if (window.saveUserProfile) window.saveUserProfile(username, { displayName: name.trim(), role: role, registeredAt: Date.now() });
+    } else if (users[username].password !== password) {
+        alert('Invalid credentials');
+        return;
     }
-});
-
-// =============================================================
-// INITIALIZATION
-// =============================================================
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Initializing Medi Electro Vault');
-    console.log('🔑 Supabase Key:', SUPABASE_PUBLISHABLE_KEY.substring(0, 20) + '...');
-    await checkFirebaseStatus();
-    await checkSupabaseStatus();
-    attachFileListener();
     
-    document.getElementById('loginPage').classList.remove('hidden');
-    document.getElementById('dashboardPage').classList.add('hidden');
-    document.getElementById('approvalsCard').style.display = 'none';
-    document.getElementById('monitoringCard').style.display = 'none';
-    window.updateCounts();
-    window.updatePendingBadge();
+    currentUsername = username;
+    currentRole = role;
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('dashboardPage').classList.remove('hidden');
+    document.getElementById('greetingUser').textContent = username + (role === 'admin' ? ' (Admin)' : role === 'faculty' ? ' (Faculty)' : '');
+    document.getElementById('roleBadge').innerHTML = role === 'admin' ? '<span class="admin-badge"><i class="fas fa-user-shield"></i> Admin</span>' : '';
     
-    console.log('✅ Medi Electro Vault ready');
-});
+    const storedName = localStorage.getItem('userName_' + username);
+    if (storedName) document.getElementById('userNameDisplay').textContent = storedName;
+    
+    // Load data
+    const savedData = localStorage.getItem('mediVaultData');
+    if (savedData) {
+        try {
+            const parsed = JSON.parse(savedData);
+            appData = parsed;
+            approvalRequests = parsed.approvalRequests || [];
+        } catch(e) {}
+    }
+    
+    loadUserAvatar(username);
+    updateCounts();
+    updatePendingBadge();
+    
+    // Listen to Firebase updates
+    if (window.listenToUserProfile) {
+        window.listenToUserProfile(username, (profile) => {
+            if (profile && profile.displayName) {
+                document.getElementById('userNameDisplay').textContent = profile.displayName;
+                localStorage.setItem('userName_' + username, profile.displayName);
+            }
+            if (profile && profile.avatar) {
+                userAvatarData = { data: profile.avatar };
+                updateAvatarDisplay();
+            }
+        });
+    }
+    
+    if (window.listenToPendingUploads) {
+        window.listenToPendingUploads((data) => {
+            if (data) {
+                const newRequests = Object.values(data);
+                approvalRequests = newRequests;
+                updatePendingBadge();
+                const container = document.getElementById('pageContainer');
+                if (container && container.querySelector('.page-container h2')?.textContent.includes('Approval')) {
+                    renderApprovalsPage(container);
+                }
+            }
+        });
+    }
+    
+    if (window.listenToFiles) {
+        window.listenToFiles((data) => {
+            if (data) {
+                // Update local data from Firebase
+                // This ensures cross-device sync
+                for (let id in data) {
+                    const file = data[id];
+                    if (file.status === 'approved') {
+                        // File is already in the system
+                    }
+                }
+            }
+        });
+    }
+    
+    console.log('✅ Logged in:', username, 'as', role);
+}
 
-console.log('📁 All features loaded');
+// ======================== INIT ========================
+document.getElementById('loginPage').classList.remove('hidden');
+document.getElementById('dashboardPage').classList.add('hidden');
+document.getElementById('approvalsCard').style.display = 'none';
+document.getElementById('monitoringCard').style.display = 'none';
+
+// Load saved data
+const saved = localStorage.getItem('mediVaultData');
+if (saved) {
+    try {
+        const parsed = JSON.parse(saved);
+        appData = parsed;
+        approvalRequests = parsed.approvalRequests || [];
+    } catch(e) {}
+}
+
+console.log('✅ Medi Electro Vault ready');
 </script>
 </body>
 </html>
