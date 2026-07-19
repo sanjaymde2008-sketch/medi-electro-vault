@@ -25,9 +25,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* ============================================================
-           COMPLETE CSS - PRESERVED IN FULL
-           ============================================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
@@ -312,7 +309,6 @@
         .subject-select { width: 100%; padding: 12px 20px; border-radius: 40px; border: 1px solid rgba(0,50,90,0.15); background: rgba(255,255,255,0.6); font-size: 1rem; transition: all 0.3s; margin-top: 4px; }
         .subject-select:focus { outline: 2px solid #1f7ea3; background: white; box-shadow: 0 0 20px rgba(31, 126, 163, 0.15); }
         
-        /* Status Badges */
         .status-badge {
             padding: 4px 14px;
             border-radius: 20px;
@@ -339,19 +335,81 @@
             border: 1px solid rgba(255, 193, 7, 0.3);
         }
         
-        @media (max-width: 650px) {
-            .portal { padding: 18px; }
-            .login-card { padding: 28px 20px; }
-            .dept-brand h1 { font-size: 1.3rem; }
-            .slogan-text { font-size: 0.8rem; animation: scrollSlogan 25s linear infinite; }
+        /* Responsive Fixes */
+        @media (max-width: 1200px) {
+            .dash-grid { grid-template-columns: repeat(4, 1fr); }
+            .dept-features { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 992px) {
+            .dash-grid { grid-template-columns: repeat(3, 1fr); }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .portal { padding: 15px; }
+            .dash-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .glass-card { padding: 18px 12px; }
+            .glass-card i { font-size: 1.8rem; padding: 10px; }
+            .dept-features { grid-template-columns: 1fr; }
+            .dept-brand h1 { font-size: 1.2rem; }
+            .dept-brand small { font-size: 0.65rem; }
+            .page-container { padding: 16px; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .stats-card { padding: 14px; }
+            .stats-card .stat-number { font-size: 1.4rem; }
+            .flex-row { gap: 8px; }
+            .vcet-brand { padding: 4px 10px 4px 6px; }
+            .vcet-logo { width: 32px; height: 32px; font-size: 0.8rem; }
+            .vcet-text { font-size: 0.6rem; }
+            .slogan-text { font-size: 0.7rem; animation: scrollSlogan 20s linear infinite; }
+            .category-card { padding: 12px; }
             .file-item { flex-direction: column; align-items: flex-start; gap: 8px; }
             .file-item .file-actions { width: 100%; justify-content: flex-start; }
-            .vcet-brand { padding: 4px 12px 4px 8px; }
-            .vcet-logo { width: 36px; height: 36px; font-size: 0.9rem; }
-            .vcet-text { font-size: 0.7rem; }
-            .dept-image-placeholder h3 { font-size: 1.4rem; }
-            .dept-features { grid-template-columns: 1fr; }
-            .glass-card .notification-badge { font-size: 0.7rem; min-width: 22px; min-height: 22px; padding: 4px 6px; top: -8px; right: -8px; }
+            .login-card { padding: 24px 16px; }
+            .login-card h2 { font-size: 1.3rem; }
+            .tab-btn { font-size: 0.75rem; padding: 8px 10px; }
+            .login-input { padding: 12px 40px 12px 14px; font-size: 0.9rem; }
+            .approval-request { padding: 14px 16px; }
+            .approval-request .request-info { flex-direction: column; }
+            .monitoring-item { padding: 10px 12px; }
+            .profile-section { padding: 14px; }
+            .status-badge { font-size: 0.6rem; padding: 3px 10px; }
+        }
+        @media (max-width: 480px) {
+            .portal { padding: 10px; border-radius: 24px; }
+            .dash-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .glass-card { padding: 14px 10px; border-radius: 20px; }
+            .glass-card i { font-size: 1.5rem; padding: 8px; }
+            .glass-card h4 { font-size: 0.8rem; margin-top: 8px; }
+            .glass-card span { font-size: 0.65rem !important; }
+            .dept-brand h1 { font-size: 1rem; }
+            .dept-brand small { font-size: 0.55rem; }
+            .page-header h2 { font-size: 1.1rem; }
+            .close-btn { font-size: 0.7rem; padding: 4px 12px; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .stats-card { padding: 10px; border-radius: 12px; }
+            .stats-card .stat-number { font-size: 1.2rem; }
+            .stats-card .stat-label { font-size: 0.65rem; }
+            .category-card h4 { font-size: 0.8rem; }
+            .category-card .file-count { font-size: 0.65rem; }
+            .file-item { padding: 8px; }
+            .file-item .file-info i { font-size: 1.2rem; }
+            .file-item .file-actions button { font-size: 0.65rem; padding: 3px 8px; }
+            .tab-btn { font-size: 0.65rem; padding: 6px 8px; }
+            .login-input { padding: 10px 36px 10px 12px; font-size: 0.8rem; }
+            .login-card h2 { font-size: 1.1rem; }
+            .login-card { padding: 16px 12px; border-radius: 24px; }
+            .badge { font-size: 0.55rem; padding: 1px 8px; }
+            .admin-badge { font-size: 0.55rem; padding: 1px 8px; }
+            .status-badge { font-size: 0.5rem; padding: 2px 8px; }
+            .footer { font-size: 0.6rem; flex-direction: column; align-items: center; gap: 6px; }
+            .dept-features { grid-template-columns: 1fr; gap: 10px; }
+            .feature-card { padding: 16px; }
+            .feature-card i { font-size: 2rem; padding: 12px; }
+            .feature-card h4 { font-size: 0.9rem; }
+            .feature-card p { font-size: 0.75rem; }
+            .subject-select { padding: 8px 14px; font-size: 0.8rem; }
+            .file-upload-area { padding: 20px; }
+            .file-upload-area i { font-size: 2rem !important; }
         }
     </style>
 </head>
@@ -455,11 +513,9 @@
                 <span class="connection-status online" id="connectionStatus">
                     <span class="dot"></span> Real-time Connected
                 </span>
-                <!-- Firebase Status -->
                 <span class="status-badge testing" id="firebaseStatus">
                     <i class="fas fa-spinner fa-spin"></i> Firebase...
                 </span>
-                <!-- Supabase Status -->
                 <span class="status-badge testing" id="supabaseStatus">
                     <i class="fas fa-spinner fa-spin"></i> Supabase...
                 </span>
@@ -541,7 +597,7 @@
 // =============================================================
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get, child, push, update, remove, onValue, off } from "firebase/database";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInWithCustomToken } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
