@@ -25,6 +25,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
+        /* ============================================================
+           COMPLETE CSS - PRESERVED IN FULL
+           ============================================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
@@ -309,6 +312,7 @@
         .subject-select { width: 100%; padding: 12px 20px; border-radius: 40px; border: 1px solid rgba(0,50,90,0.15); background: rgba(255,255,255,0.6); font-size: 1rem; transition: all 0.3s; margin-top: 4px; }
         .subject-select:focus { outline: 2px solid #1f7ea3; background: white; box-shadow: 0 0 20px rgba(31, 126, 163, 0.15); }
         
+        /* Status Badges */
         .status-badge {
             padding: 4px 14px;
             border-radius: 20px;
@@ -451,9 +455,11 @@
                 <span class="connection-status online" id="connectionStatus">
                     <span class="dot"></span> Real-time Connected
                 </span>
+                <!-- Firebase Status -->
                 <span class="status-badge testing" id="firebaseStatus">
                     <i class="fas fa-spinner fa-spin"></i> Firebase...
                 </span>
+                <!-- Supabase Status -->
                 <span class="status-badge testing" id="supabaseStatus">
                     <i class="fas fa-spinner fa-spin"></i> Supabase...
                 </span>
@@ -535,7 +541,7 @@
 // =============================================================
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get, child, push, update, remove, onValue, off } from "firebase/database";
-import { getAuth, onAuthStateChanged, signInWithCustomToken } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
