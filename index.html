@@ -335,6 +335,7 @@
             border: 1px solid rgba(255, 193, 7, 0.3);
         }
         
+        /* Responsive Fixes */
         @media (max-width: 1200px) {
             .dash-grid { grid-template-columns: repeat(4, 1fr); }
             .dept-features { grid-template-columns: repeat(2, 1fr); }
@@ -596,7 +597,7 @@
 // =============================================================
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get, child, push, update, remove, onValue, off } from "firebase/database";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInWithCustomToken } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -922,116 +923,6 @@ async function rejectPendingUpload(pendingId, fileData) {
 }
 
 // =============================================================
-// GLOBAL REALTIME SYNCHRONIZATION - FIX
-// =============================================================
-let globalListenersAttached = false;
-
-function attachGlobalRealtimeListeners() {
-    if (globalListenersAttached) return;
-    globalListenersAttached = true;
-    
-    // 1. Listen to ALL files
-    const filesRef = ref(firebaseDb, 'files');
-    onValue(filesRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('📡 ALL FILES updated:', Object.keys(data).length);
-            if (window.appData) {
-                for (let id in data) {
-                    const file = data[id];
-                    updateFileInAppData(file);
-                }
-                updateAllFileCounters();
-                refreshCurrentPage();
-            }
-        }
-    });
-    
-    // 2. Listen to ALL users/profiles
-    const usersRef = ref(firebaseDb, 'users');
-    onValue(usersRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('📡 ALL USERS updated:', Object.keys(data).length);
-            if (window.registeredUsers) {
-                window.registeredUsers = data;
-            }
-            const container = document.getElementById('pageContainer');
-            if (container && container.querySelector('.page-container h2')?.textContent.includes('Monitoring')) {
-                renderMonitoringPage(container);
-            }
-        }
-    });
-    
-    // 3. Listen to ALL pending uploads
-    const pendingRef = ref(firebaseDb, 'pending_uploads');
-    onValue(pendingRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('📡 PENDING UPLOADS updated:', Object.keys(data).length);
-            if (window.approvalRequests !== undefined) {
-                window.approvalRequests = Object.values(data);
-            }
-            updatePendingBadge();
-            const container = document.getElementById('pageContainer');
-            if (container && container.querySelector('.page-container h2')?.textContent.includes('Approval')) {
-                renderApprovalsPage(container);
-            }
-        }
-    });
-    
-    // 4. Listen to subjects
-    const subjectsRef = ref(firebaseDb, 'subjects');
-    onValue(subjectsRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('📡 SUBJECTS updated:', Object.keys(data).length);
-            if (window.appData) {
-                if (data.questionPapers) {
-                    for (let cat in data.questionPapers) {
-                        if (window.appData.questionPapers[cat]) {
-                            window.appData.questionPapers[cat].subjects = data.questionPapers[cat];
-                        }
-                    }
-                }
-                if (data.subjectMaterials) {
-                    window.appData.subjectMaterials.subjects = data.subjectMaterials;
-                }
-                updateCounts();
-                refreshCurrentPage();
-            }
-        }
-    });
-}
-
-function updateFileInAppData(file) {
-    if (!window.appData) return;
-    for (let cat in window.appData.questionPapers) {
-        for (let subject in window.appData.questionPapers[cat].files) {
-            const files = window.appData.questionPapers[cat].files[subject];
-            const idx = files.findIndex(f => f.id === file.id);
-            if (idx !== -1) {
-                files[idx] = file;
-                return;
-            }
-        }
-    }
-    for (let subject in window.appData.subjectMaterials.files) {
-        const files = window.appData.subjectMaterials.files[subject];
-        const idx = files.findIndex(f => f.id === file.id);
-        if (idx !== -1) {
-            files[idx] = file;
-            return;
-        }
-    }
-}
-
-function updateAllFileCounters() {
-    if (window.updateCounts) window.updateCounts();
-    if (window.updatePendingBadge) window.updatePendingBadge();
-}
-
-// =============================================================
 // EXPOSE FOR GLOBAL USE
 // =============================================================
 window.getUserProfile = getUserProfile;
@@ -1044,7 +935,6 @@ window.listenToPendingUploads = listenToPendingUploads;
 window.submitPendingUpload = submitPendingUpload;
 window.approvePendingUpload = approvePendingUpload;
 window.rejectPendingUpload = rejectPendingUpload;
-window.attachGlobalRealtimeListeners = attachGlobalRealtimeListeners;
 window.testFirebase = testFirebaseConnection;
 window.testSupabase = testSupabaseConnection;
 
@@ -1701,9 +1591,6 @@ function editQPSubject(cat, oldSubject) {
         if (idx !== -1) appData.questionPapers[cat].subjects[idx] = newSubject;
         if (appData.questionPapers[cat].files[oldSubject]) { appData.questionPapers[cat].files[newSubject] = appData.questionPapers[cat].files[oldSubject]; delete appData.questionPapers[cat].files[oldSubject]; }
         saveData(appData);
-        // Sync to Firebase
-        const subjectsRef = ref(firebaseDb, 'subjects/questionPapers/' + cat);
-        set(subjectsRef, appData.questionPapers[cat].subjects);
         logUserActivity(currentUsername, currentRole, 'Edit Subject', `Edited QP subject ${oldSubject} to ${newSubject}`);
         renderQuestionPapers(document.getElementById('pageContainer'));
     });
@@ -1718,9 +1605,6 @@ function deleteQPSubject(cat, subject) {
         if (idx !== -1) appData.questionPapers[cat].subjects.splice(idx, 1);
         delete appData.questionPapers[cat].files[subject];
         saveData(appData);
-        // Sync to Firebase
-        const subjectsRef = ref(firebaseDb, 'subjects/questionPapers/' + cat);
-        set(subjectsRef, appData.questionPapers[cat].subjects);
         logUserActivity(currentUsername, currentRole, 'Delete Subject', `Deleted QP subject ${subject}`);
         renderQuestionPapers(document.getElementById('pageContainer'));
     });
@@ -1735,9 +1619,6 @@ function addQPSubject(cat) {
         appData.questionPapers[cat].subjects.push(newSubject);
         appData.questionPapers[cat].files[newSubject] = [];
         saveData(appData);
-        // Sync to Firebase
-        const subjectsRef = ref(firebaseDb, 'subjects/questionPapers/' + cat);
-        set(subjectsRef, appData.questionPapers[cat].subjects);
         logUserActivity(currentUsername, currentRole, 'Add Subject', `Added QP subject ${newSubject}`);
         renderQuestionPapers(document.getElementById('pageContainer'));
     });
@@ -1753,9 +1634,6 @@ function editSMSubject(oldSubject) {
         if (idx !== -1) appData.subjectMaterials.subjects[idx] = newSubject;
         if (appData.subjectMaterials.files[oldSubject]) { appData.subjectMaterials.files[newSubject] = appData.subjectMaterials.files[oldSubject]; delete appData.subjectMaterials.files[oldSubject]; }
         saveData(appData);
-        // Sync to Firebase
-        const subjectsRef = ref(firebaseDb, 'subjects/subjectMaterials');
-        set(subjectsRef, appData.subjectMaterials.subjects);
         logUserActivity(currentUsername, currentRole, 'Edit Subject', `Edited SM subject ${oldSubject} to ${newSubject}`);
         renderSubjectMaterials(document.getElementById('pageContainer'));
     });
@@ -1770,9 +1648,6 @@ function deleteSMSubject(subject) {
         if (idx !== -1) appData.subjectMaterials.subjects.splice(idx, 1);
         delete appData.subjectMaterials.files[subject];
         saveData(appData);
-        // Sync to Firebase
-        const subjectsRef = ref(firebaseDb, 'subjects/subjectMaterials');
-        set(subjectsRef, appData.subjectMaterials.subjects);
         logUserActivity(currentUsername, currentRole, 'Delete Subject', `Deleted SM subject ${subject}`);
         renderSubjectMaterials(document.getElementById('pageContainer'));
     });
@@ -1787,9 +1662,6 @@ function addSMSubject() {
         appData.subjectMaterials.subjects.push(newSubject);
         appData.subjectMaterials.files[newSubject] = [];
         saveData(appData);
-        // Sync to Firebase
-        const subjectsRef = ref(firebaseDb, 'subjects/subjectMaterials');
-        set(subjectsRef, appData.subjectMaterials.subjects);
         logUserActivity(currentUsername, currentRole, 'Add Subject', `Added SM subject ${newSubject}`);
         renderSubjectMaterials(document.getElementById('pageContainer'));
     });
@@ -1891,9 +1763,6 @@ function deleteFile(cat, subject, idx) {
         const name = appData.questionPapers[cat].files[subject][idx].name;
         appData.questionPapers[cat].files[subject].splice(idx, 1);
         saveData(appData);
-        // Sync to Firebase
-        const fileRef = ref(firebaseDb, 'files/' + appData.questionPapers[cat].files[subject][idx]?.id);
-        if (fileRef) remove(fileRef);
         logUserActivity(currentUsername, currentRole, 'Delete File', `Deleted ${name}`);
         viewQuestionPapers(cat, subject);
     }
@@ -1916,9 +1785,6 @@ function deleteSMFile(subject, idx) {
         const name = appData.subjectMaterials.files[subject][idx].name;
         appData.subjectMaterials.files[subject].splice(idx, 1);
         saveData(appData);
-        // Sync to Firebase
-        const fileRef = ref(firebaseDb, 'files/' + appData.subjectMaterials.files[subject][idx]?.id);
-        if (fileRef) remove(fileRef);
         logUserActivity(currentUsername, currentRole, 'Delete File', `Deleted ${name}`);
         viewSubjectMaterials(subject);
     }
@@ -2013,7 +1879,6 @@ function approveRequest(requestId) {
     if (!confirm(`Approve upload request for "${request.subject}"?`)) return;
     try {
         request.status = 'approved';
-        let fileDataToSave = null;
         if (request.category === 'Question Papers') {
             const cat = request.cat,
                 subject = request.subject;
@@ -2038,7 +1903,6 @@ function approveRequest(requestId) {
                         uploadedAt: Date.now(),
                         uploadedBy: request.requestedBy
                     });
-                    fileDataToSave = fileData;
                 });
             }
         } else if (request.category === 'Subject Materials') {
@@ -2063,7 +1927,6 @@ function approveRequest(requestId) {
                         uploadedAt: Date.now(),
                         uploadedBy: request.requestedBy
                     });
-                    fileDataToSave = fileData;
                 });
             }
         } else throw new Error('Unknown category');
@@ -2074,25 +1937,7 @@ function approveRequest(requestId) {
         saveData(appData);
         updatePendingBadge();
         logUserActivity(currentUsername, currentRole, 'Approve Request', `Approved ${request.subject}`);
-        
-        // CRITICAL: Write to Firebase for realtime sync
-        if (fileDataToSave) {
-            const firebaseRef = ref(firebaseDb, 'files/' + fileDataToSave.id);
-            set(firebaseRef, {
-                id: fileDataToSave.id,
-                fileName: fileDataToSave.name,
-                subject: request.subject,
-                uploadedBy: request.requestedBy,
-                uploadedAt: fileDataToSave.uploadedAt,
-                fileUrl: fileDataToSave.data,
-                status: 'approved',
-                category: request.category
-            });
-            // Remove from pending
-            const pendingRef = ref(firebaseDb, 'pending_uploads/' + request.id);
-            remove(pendingRef);
-        }
-        
+        if (window.approvePendingUpload) window.approvePendingUpload(request.id, request);
         showMessage('✅ Approved', `Request for "${request.subject}" approved.`);
         renderApprovalsPage(document.getElementById('pageContainer'));
     } catch (e) {
@@ -2304,7 +2149,7 @@ async function uploadFilesForApproval(files, subject) {
             const target = uploadCategory === 'questionPapers' ? appData.questionPapers[catValue] : appData.subjectMaterials;
             if (!target.files[subject]) target.files[subject] = [];
             uploadedFiles.forEach(file => {
-                const fileData = {
+                target.files[subject].push({
                     id: generateId(),
                     name: file.name,
                     size: file.size,
@@ -2312,26 +2157,13 @@ async function uploadFilesForApproval(files, subject) {
                     data: file.data,
                     uploadedAt: Date.now(),
                     uploadedBy: currentUsername || 'anonymous'
-                };
-                target.files[subject].push(fileData);
+                });
                 appData.uploadHistory.push({
                     fileName: file.name,
                     category: category,
                     subject: subject,
                     uploadedAt: Date.now(),
                     uploadedBy: currentUsername || 'anonymous'
-                });
-                // Sync to Firebase
-                const firebaseRef = ref(firebaseDb, 'files/' + fileData.id);
-                set(firebaseRef, {
-                    id: fileData.id,
-                    fileName: fileData.name,
-                    subject: subject,
-                    uploadedBy: fileData.uploadedBy,
-                    uploadedAt: fileData.uploadedAt,
-                    fileUrl: fileData.data,
-                    status: 'approved',
-                    category: category
                 });
             });
             saveData(appData);
@@ -2615,9 +2447,36 @@ function showDashboard(username, role, displayName) {
         });
     }
     
-    // Attach global realtime listeners
-    if (window.attachGlobalRealtimeListeners) {
-        window.attachGlobalRealtimeListeners();
+    // Listen to files
+    if (window.listenToFiles) {
+        window.listenToFiles((data) => {
+            if (data) {
+                // Update local data
+                for (let id in data) {
+                    const file = data[id];
+                    if (file.status === 'approved') {
+                        // File is approved
+                    }
+                }
+                updateCounts();
+                refreshCurrentPage();
+            }
+        });
+    }
+    
+    // Listen to pending uploads
+    if (window.listenToPendingUploads) {
+        window.listenToPendingUploads((data) => {
+            if (data) {
+                const newRequests = Object.values(data);
+                appData.approvalRequests = newRequests;
+                updatePendingBadge();
+                const container = document.getElementById('pageContainer');
+                if (container && container.querySelector('.page-container h2')?.textContent.includes('Approval')) {
+                    renderApprovalsPage(container);
+                }
+            }
+        });
     }
     
     updateCounts();
@@ -2637,8 +2496,6 @@ console.log('✅ Medi Electro Vault - Fully Functional!');
 console.log('🔥 Firebase Realtime Database: Connected');
 console.log('📊 Supabase: Connected');
 console.log('📁 Admin uploads directly, Students/Faculty require approval');
-console.log('🔄 Full real-time synchronization enabled for ALL modules');
-console.log('📡 All connected devices will sync instantly');
 </script>
 </body>
 </html>
