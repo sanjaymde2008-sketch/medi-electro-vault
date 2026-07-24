@@ -936,11 +936,9 @@ function attachGlobalRealtimeListeners() {
         if (snapshot.exists()) {
             const data = snapshot.val();
             console.log('📡 ALL FILES updated:', Object.keys(data).length);
-            // Update global appData
             if (window.appData) {
                 for (let id in data) {
                     const file = data[id];
-                    // Update in existing data structure
                     updateFileInAppData(file);
                 }
                 updateAllFileCounters();
@@ -981,11 +979,33 @@ function attachGlobalRealtimeListeners() {
             }
         }
     });
+    
+    // 4. Listen to subjects
+    const subjectsRef = ref(firebaseDb, 'subjects');
+    onValue(subjectsRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            console.log('📡 SUBJECTS updated:', Object.keys(data).length);
+            if (window.appData) {
+                if (data.questionPapers) {
+                    for (let cat in data.questionPapers) {
+                        if (window.appData.questionPapers[cat]) {
+                            window.appData.questionPapers[cat].subjects = data.questionPapers[cat];
+                        }
+                    }
+                }
+                if (data.subjectMaterials) {
+                    window.appData.subjectMaterials.subjects = data.subjectMaterials;
+                }
+                updateCounts();
+                refreshCurrentPage();
+            }
+        }
+    });
 }
 
 function updateFileInAppData(file) {
     if (!window.appData) return;
-    // Check question papers
     for (let cat in window.appData.questionPapers) {
         for (let subject in window.appData.questionPapers[cat].files) {
             const files = window.appData.questionPapers[cat].files[subject];
@@ -996,7 +1016,6 @@ function updateFileInAppData(file) {
             }
         }
     }
-    // Check subject materials
     for (let subject in window.appData.subjectMaterials.files) {
         const files = window.appData.subjectMaterials.files[subject];
         const idx = files.findIndex(f => f.id === file.id);
@@ -2619,6 +2638,7 @@ console.log('🔥 Firebase Realtime Database: Connected');
 console.log('📊 Supabase: Connected');
 console.log('📁 Admin uploads directly, Students/Faculty require approval');
 console.log('🔄 Full real-time synchronization enabled for ALL modules');
+console.log('📡 All connected devices will sync instantly');
 </script>
 </body>
 </html>
