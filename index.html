@@ -1065,11 +1065,63 @@ function loadData() {
     return getDefaultData();
 }
 
+// Normalizes data coming back from Firebase (which can turn sparse/empty
+// arrays into objects) so every module keeps working with real arrays.
+function normalizeAppData(data) {
+    const def = getDefaultData();
+    if (!data || typeof data !== 'object') return def;
+    for (let k in def) if (data[k] === undefined || data[k] === null) data[k] = def[k];
+    ['cat1', 'cat2', 'cat3'].forEach(cat => {
+        if (!data.questionPapers[cat]) data.questionPapers[cat] = def.questionPapers[cat];
+        if (!Array.isArray(data.questionPapers[cat].subjects)) {
+            data.questionPapers[cat].subjects = data.questionPapers[cat].subjects ? Object.values(data.questionPapers[cat].subjects) : def.questionPapers[cat].subjects;
+        }
+        if (!data.questionPapers[cat].files || typeof data.questionPapers[cat].files !== 'object') data.questionPapers[cat].files = {};
+        for (let s in data.questionPapers[cat].files) {
+            if (!Array.isArray(data.questionPapers[cat].files[s])) data.questionPapers[cat].files[s] = Object.values(data.questionPapers[cat].files[s] || {});
+        }
+    });
+    if (!data.subjectMaterials) data.subjectMaterials = def.subjectMaterials;
+    if (!Array.isArray(data.subjectMaterials.subjects)) {
+        data.subjectMaterials.subjects = data.subjectMaterials.subjects ? Object.values(data.subjectMaterials.subjects) : def.subjectMaterials.subjects;
+    }
+    if (!data.subjectMaterials.files || typeof data.subjectMaterials.files !== 'object') data.subjectMaterials.files = {};
+    for (let s in data.subjectMaterials.files) {
+        if (!Array.isArray(data.subjectMaterials.files[s])) data.subjectMaterials.files[s] = Object.values(data.subjectMaterials.files[s] || {});
+    }
+    ['uploadHistory', 'approvalRequests', 'approvedRequests', 'userLogins', 'userActivity'].forEach(k => {
+        if (!Array.isArray(data[k])) data[k] = data[k] ? Object.values(data[k]) : [];
+    });
+    if (!data.userEmails || typeof data.userEmails !== 'object') data.userEmails = {};
+    return data;
+}
+
 function saveData(data) {
     localStorage.setItem('mediVaultData', JSON.stringify(data));
+    // Real-time sync: push the full app dataset to Firebase so every
+    // connected user (student/faculty/admin) sees changes instantly.
+    if (window.firebaseDb && window.firebaseRef && window.firebaseSet) {
+        try { window.firebaseSet(window.firebaseRef(window.firebaseDb, 'appData'), data); }
+        catch (e) { console.error('❌ appData realtime sync error:', e.message); }
+    }
     updateCounts();
     updatePendingBadge();
 }
+
+// Real-time listener: keeps appData in sync across all logged-in users.
+function listenToAppData(callback) {
+    if (!window.firebaseDb || !window.firebaseRef || !window.firebaseOnValue) return;
+    const dataRef = window.firebaseRef(window.firebaseDb, 'appData');
+    window.firebaseOnValue(dataRef, (snapshot) => {
+        if (snapshot.exists()) {
+            appData = normalizeAppData(snapshot.val());
+            localStorage.setItem('mediVaultData', JSON.stringify(appData));
+            console.log('📡 appData synced in real time');
+            if (callback) callback(appData);
+        }
+    });
+}
+window.listenToAppData = listenToAppData;
 
 function loadUsers() {
     try {
@@ -1080,7 +1132,29 @@ function loadUsers() {
 
 function saveUsers(users) {
     localStorage.setItem('mediVaultUsers', JSON.stringify(users));
+    // Real-time sync: every registration/removal/password change is
+    // pushed to Firebase so all users/devices validate against the
+    // same live account list.
+    if (window.firebaseDb && window.firebaseRef && window.firebaseSet) {
+        try { window.firebaseSet(window.firebaseRef(window.firebaseDb, 'registeredUsers'), users); }
+        catch (e) { console.error('❌ registeredUsers realtime sync error:', e.message); }
+    }
 }
+
+// Real-time listener: keeps registeredUsers in sync across all users.
+function listenToRegisteredUsers(callback) {
+    if (!window.firebaseDb || !window.firebaseRef || !window.firebaseOnValue) return;
+    const usersRef = window.firebaseRef(window.firebaseDb, 'registeredUsers');
+    window.firebaseOnValue(usersRef, (snapshot) => {
+        if (snapshot.exists()) {
+            registeredUsers = snapshot.val();
+            localStorage.setItem('mediVaultUsers', JSON.stringify(registeredUsers));
+            console.log('📡 registeredUsers synced in real time');
+            if (callback) callback(registeredUsers);
+        }
+    });
+}
+window.listenToRegisteredUsers = listenToRegisteredUsers;
 
 function loadUserNamesData() {
     try {
@@ -1091,7 +1165,26 @@ function loadUserNamesData() {
 
 function saveUserNamesData(data) {
     localStorage.setItem('mediVaultUserNames', JSON.stringify(data));
+    // Real-time sync of display names across all users/devices.
+    if (window.firebaseDb && window.firebaseRef && window.firebaseSet) {
+        try { window.firebaseSet(window.firebaseRef(window.firebaseDb, 'userNames'), data); }
+        catch (e) { console.error('❌ userNames realtime sync error:', e.message); }
+    }
 }
+
+// Real-time listener: keeps userNamesData in sync across all users.
+function listenToUserNamesData(callback) {
+    if (!window.firebaseDb || !window.firebaseRef || !window.firebaseOnValue) return;
+    const namesRef = window.firebaseRef(window.firebaseDb, 'userNames');
+    window.firebaseOnValue(namesRef, (snapshot) => {
+        if (snapshot.exists()) {
+            userNamesData = snapshot.val();
+            localStorage.setItem('mediVaultUserNames', JSON.stringify(userNamesData));
+            if (callback) callback(userNamesData);
+        }
+    });
+}
+window.listenToUserNamesData = listenToUserNamesData;
 
 function getStoredUserName(username) {
     const data = loadUserNamesData();
@@ -1103,6 +1196,42 @@ function setStoredUserName(username, name) {
     data[username] = name;
     saveUserNamesData(data);
 }
+
+// =============================================================
+// GLOBAL REAL-TIME SYNC — connects every module (question papers,
+// subject materials, approvals, monitoring, accounts, profiles) so
+// all users see the exact same live data the instant it changes.
+// =============================================================
+let realtimeSyncStarted = false;
+function initRealtimeSync() {
+    if (realtimeSyncStarted) return;
+    if (!window.firebaseDb || !window.firebaseRef || !window.firebaseOnValue) {
+        setTimeout(initRealtimeSync, 300);
+        return;
+    }
+    realtimeSyncStarted = true;
+
+    listenToAppData(function() {
+        updateCounts();
+        updatePendingBadge();
+        refreshCurrentPage();
+    });
+
+    listenToRegisteredUsers(function() {
+        const container = document.getElementById('pageContainer');
+        if (container && container.querySelector('.page-container h2')?.textContent.includes('Monitoring')) {
+            renderMonitoringPage(container);
+        }
+    });
+
+    listenToUserNamesData(function() {
+        refreshCurrentPage();
+    });
+
+    console.log('🔄 Real-time sync active — all modules connected for all users');
+}
+window.initRealtimeSync = initRealtimeSync;
+document.addEventListener('DOMContentLoaded', initRealtimeSync);
 
 // ======================== INIT DATA ========================
 appData = loadData();
