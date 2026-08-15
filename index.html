@@ -762,7 +762,11 @@ async function getUserProfile(username) {
 
 async function saveUserProfile(username, data) {
     try {
-        await set(ref(firebaseDb, `users/${username}`), {
+        // NOTE: uses update() (not set()) so that saving one field
+        // (e.g. displayName) never wipes out sibling fields already
+        // stored at this path (e.g. avatar, email). This is the fix
+        // for cross-device profile fields clobbering each other.
+        await update(ref(firebaseDb, `users/${username}`), {
             ...data,
             username: username,
             updatedAt: Date.now()
@@ -1354,8 +1358,12 @@ function removeAvatar() {
 
 function saveUserAvatar(username, data) {
     const key = 'userAvatar_' + username;
+    // localStorage is kept only as a fast local cache; Firebase (via
+    // saveUserProfile -> users/{username}) is the shared source of truth
+    // so avatar changes reach every connected device in real time.
     if (data) localStorage.setItem(key, data);
     else localStorage.removeItem(key);
+    if (window.saveUserProfile) window.saveUserProfile(username, { avatar: data || null });
 }
 
 function loadUserAvatar(username) {
@@ -1490,7 +1498,6 @@ function renderDepartmentPage(container) {
 function renderProfilePage(container) {
     const user = registeredUsers[currentUsername];
     const storedName = getStoredUserName(currentUsername);
-    const email = appData.userEmails[currentUsername] || '';
     const registeredDate = user ? formatDateShort(user.registeredAt) : 'N/A';
     container.innerHTML = `
         <div class="page-container">
@@ -1519,15 +1526,6 @@ function renderProfilePage(container) {
                 <div style="margin-bottom:12px;"><label style="font-weight:500; display:block; margin-bottom:4px; color:#0a2b48;">Confirm New Password</label><div class="password-field"><input type="password" id="confirmPassword" class="login-input" placeholder="Confirm new password" style="padding-right:40px;" /><button type="button" class="eye-btn-small" onclick="togglePasswordField('confirmPassword')"><i class="fas fa-eye"></i></button></div></div>
                 <button class="btn-primary" onclick="changePassword()"><i class="fas fa-save"></i> Update Password</button>
                 <div id="passwordStatus" style="margin-top:12px;"></div>
-            </div>
-            <div class="profile-section">
-                <h3 style="color:#0a2b48; margin-bottom:16px;"><i class="fas fa-envelope" style="color:#0a4b78;"></i> Email Notifications</h3>
-                <p style="color:#1f5175; font-size:0.9rem; margin-bottom:12px;">Set your email address to receive notifications.</p>
-                <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                    <input type="email" id="profileEmailInput" class="login-input" placeholder="Enter your email address" value="${email}" style="flex:1; max-width:400px;" />
-                    <button class="btn-primary" onclick="saveUserEmailProfile()"><i class="fas fa-save"></i> Save Email</button>
-                </div>
-                <div id="emailStatus" style="margin-top:12px;"></div>
             </div>
         </div>`;
 }
@@ -1583,23 +1581,6 @@ function changePassword() {
     } else if (statusDiv) {
         statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Error updating password.</div>`;
     }
-}
-
-function saveUserEmailProfile() {
-    const emailInput = document.getElementById('profileEmailInput');
-    if (!emailInput) return;
-    const email = emailInput.value.trim();
-    const statusDiv = document.getElementById('emailStatus');
-    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-        if (statusDiv) statusDiv.innerHTML = `<div style="color:#dc3545; padding:8px 12px; background:rgba(220,53,69,0.1); border-radius:12px;"><i class="fas fa-exclamation-circle"></i> Please enter a valid email address.</div>`;
-        return;
-    }
-    appData.userEmails[currentUsername] = email;
-    saveData(appData);
-    if (statusDiv) statusDiv.innerHTML = `<div style="color:#28a745; padding:8px 12px; background:rgba(40,167,69,0.1); border-radius:12px;"><i class="fas fa-check-circle"></i> Email saved successfully!</div>`;
-    setTimeout(() => { if (statusDiv) statusDiv.innerHTML = ''; }, 5000);
-    logUserActivity(currentUsername, currentRole, 'Update Email', `Updated email to ${email}`);
-    if (window.saveUserProfile) window.saveUserProfile(currentUsername, { email: email });
 }
 
 // ======================== MONITORING ========================
@@ -2496,9 +2477,19 @@ document.getElementById('studentForm').addEventListener('submit', function(e) {
     const password = document.getElementById('studentPassword').value.trim();
     const match = username.match(/^732925MDR(\d{3})$/);
     if (!match || parseInt(match[1]) < 1 || parseInt(match[1]) > 63) { alert('Invalid register number. Must be 732925MDR001-063'); return; }
-    if (!password || !isValidDate(password)) { alert('Invalid password. Use DD/MM/YYYY'); return; }
-    if (!registeredUsers[username]) registerUser(username, password, 'student');
-    else if (!validateUser(username, password)) { alert('Invalid credentials'); return; }
+    if (!password) { alert('Please enter your password.'); return; }
+    if (!registeredUsers[username]) {
+        // First-time registration only: DOB format is required because
+        // it becomes the account's initial password.
+        if (!isValidDate(password)) { alert('Invalid password. Use DD/MM/YYYY'); return; }
+        registerUser(username, password, 'student');
+    } else if (!validateUser(username, password)) {
+        // Existing account: validate against whatever password is
+        // currently stored — DOB if unchanged, or a custom password
+        // if the user has changed it via Profile > Change Password.
+        alert('Invalid credentials');
+        return;
+    }
     currentUsername = username;
     currentRole = 'student';
     logUserLogin(username, 'student');
@@ -2512,9 +2503,19 @@ document.getElementById('facultyForm').addEventListener('submit', function(e) {
     const password = document.getElementById('facultyPassword').value.trim();
     const parts = username.split(' ');
     if (parts.length < 2 || parts.some(p => !p.match(/^[A-Z]+$/))) { alert('Faculty name: All caps with spaces (e.g., SANJAY R)'); return; }
-    if (!password || !isValidDate(password)) { alert('Invalid password. Use DD/MM/YYYY'); return; }
-    if (!registeredUsers[username]) registerUser(username, password, 'faculty');
-    else if (!validateUser(username, password)) { alert('Invalid credentials'); return; }
+    if (!password) { alert('Please enter your password.'); return; }
+    if (!registeredUsers[username]) {
+        // First-time registration only: DOB format is required because
+        // it becomes the account's initial password.
+        if (!isValidDate(password)) { alert('Invalid password. Use DD/MM/YYYY'); return; }
+        registerUser(username, password, 'faculty');
+    } else if (!validateUser(username, password)) {
+        // Existing account: validate against whatever password is
+        // currently stored — DOB if unchanged, or a custom password
+        // if the user has changed it via Profile > Change Password.
+        alert('Invalid credentials');
+        return;
+    }
     currentUsername = username;
     currentRole = 'faculty';
     logUserLogin(username, 'faculty');
@@ -2570,6 +2571,12 @@ function showDashboard(username, role, displayName) {
                 }
                 if (profile.avatar) {
                     userAvatarData = { data: profile.avatar };
+                    updateAvatarDisplay();
+                } else {
+                    // Firebase is the source of truth: if it says there's
+                    // no avatar (e.g. removed on another device), clear it
+                    // here too instead of leaving a stale local copy.
+                    userAvatarData = {};
                     updateAvatarDisplay();
                 }
             }
