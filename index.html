@@ -1412,7 +1412,12 @@ function showFilePreview(fileData, fileName, fileType) {
 }
 
 function downloadFileFromPreview(fileData, fileName) {
-    downloadFileToDevice(fileData, fileName);
+    const a = document.createElement('a');
+    a.href = fileData;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 // ======================== NAVIGATION ========================
@@ -1842,44 +1847,6 @@ function viewSubjectMaterials(subject) {
 }
 
 // ======================== FILE FUNCTIONS ========================
-// Shared download helper used by every Download button (Question
-// Papers, Subject Materials, Search, My Uploads, Preview modal).
-// Fixes: file.data is often a remote Supabase Storage URL, and the
-// browser ignores the <a download> attribute for cross-origin URLs —
-// so clicking Download just opened/navigated to the file, identical
-// to Preview. Fetching the file as a Blob first gives a same-origin
-// blob: URL, so the download attribute is honored and a real file
-// download is triggered instead.
-async function downloadFileToDevice(url, fileName) {
-    try {
-        if (url.startsWith('data:')) {
-            // Base64 data URLs already work directly with the download attribute.
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName || 'download';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            return;
-        }
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = fileName || 'download';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-        console.error('❌ Download error:', error.message);
-        // Fallback so the user isn't left with a dead button if the fetch fails.
-        window.open(url, '_blank');
-    }
-}
-window.downloadFileToDevice = downloadFileToDevice;
-
 function previewFile(cat, subject, idx) {
     const file = appData.questionPapers[cat].files[subject][idx];
     if (file && file.data) showFilePreview(file.data, file.name, file.type);
@@ -1891,7 +1858,12 @@ function previewSMFile(subject, idx) {
 function downloadFile(cat, subject, idx) {
     const file = appData.questionPapers[cat].files[subject][idx];
     if (file && file.data) {
-        downloadFileToDevice(file.data, file.name);
+        const a = document.createElement('a');
+        a.href = file.data;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
         logUserActivity(currentUsername, currentRole, 'Download File', `Downloaded ${file.name}`);
     }
 }
@@ -1908,7 +1880,12 @@ function deleteFile(cat, subject, idx) {
 function downloadSMFile(subject, idx) {
     const file = appData.subjectMaterials.files[subject][idx];
     if (file && file.data) {
-        downloadFileToDevice(file.data, file.name);
+        const a = document.createElement('a');
+        a.href = file.data;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
         logUserActivity(currentUsername, currentRole, 'Download File', `Downloaded ${file.name}`);
     }
 }
@@ -2376,7 +2353,12 @@ function previewSearchResult(idx) {
 function downloadSearchResult(idx) {
     const file = window._searchResults[idx];
     if (file && file.data) {
-        downloadFileToDevice(file.data, file.name);
+        const a = document.createElement('a');
+        a.href = file.data;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
 }
 
@@ -2414,7 +2396,12 @@ function previewMyUpload(idx) {
 function downloadMyUpload(idx) {
     const file = window._userUploads[idx];
     if (file && file.data) {
-        downloadFileToDevice(file.data, file.fileName);
+        const a = document.createElement('a');
+        a.href = file.data;
+        a.download = file.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
 }
 
