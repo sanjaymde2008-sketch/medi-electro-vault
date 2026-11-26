@@ -9,20 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     
-    <!-- Firebase SDK -->
-    <script type="importmap">
-    {
-        "imports": {
-            "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
-            "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js",
-            "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js",
-            "firebase/storage": "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"
-        }
-    }
-    </script>
-
     <!-- Supabase CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -106,6 +94,10 @@
         .btn-success:hover { background: #218838; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3); }
         .btn-info { background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 40px; font-weight: 500; transition: all 0.3s; cursor: pointer; font-family: 'Inter', sans-serif; }
         .btn-info:hover { background: #138496; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(23, 162, 184, 0.3); }
+        .welcome-admin-btn { position: absolute; top: 14px; right: 14px; background: rgba(10,75,120,0.1); border: 1px solid rgba(10,75,120,0.2); color: #0a2b48; border-radius: 30px; padding: 6px 14px; font-size: 0.75rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
+        .link-btn { background: none; border: 0; color: #0a4b78; text-decoration: underline; cursor: pointer; margin-top: 14px; font-family: 'Inter', sans-serif; font-size: 0.85rem; }
+        .welcome-avatar { width: 92px; height: 92px; border-radius: 50%; margin: 30px auto 12px; overflow: hidden; font-size: 5rem; line-height: 92px; color: #1f7ea3; }
+        .welcome-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .login-card { background: rgba(255,255,255,0.5); backdrop-filter: blur(8px); border-radius: 48px; padding: 40px 44px; max-width: 520px; margin: 0 auto; box-shadow: 0 20px 40px -12px rgba(0,40,70,0.2); border: 1px solid rgba(255,255,255,0.6); animation: slideUp 0.6s ease-out; }
         @keyframes slideUp { 0% { opacity: 0; transform: translateY(40px); } 100% { opacity: 1; transform: translateY(0); } }
         .login-card h2 { font-weight: 700; font-size: 1.8rem; color: #0a2b48; text-align: center; }
@@ -446,34 +438,285 @@
         @keyframes spDot { 0%, 80%, 100% { opacity: 0.2; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
         @keyframes spShine { to { background-position: -200% 0; } }
         @keyframes spFloat { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(14px,-18px); } }
-        #splashScreen .sp-logo::before, #splashScreen .sp-logo::after { display: none; }
-        #splashScreen .sp-orb { animation: none; }
         @media (max-width: 480px) { .sp-title { font-size: 1.5rem; } .sp-msg { font-size: 1rem; } }
+    
+        /* ================= PROFESSIONAL THEME (visual layer only, no logic) ================= */
+        :root { --ink: #0f2a43; --muted: #5b7083; --line: #dbe4ee; --primary: #0f4c81; --primary-d: #0b3a63; --accent: #1b7f9e; --shadow: 0 1px 2px rgba(15,42,67,.06), 0 12px 26px -16px rgba(15,42,67,.2); }
+        html { scroll-behavior: smooth; }
+        body { background: linear-gradient(180deg, #eef3f8, #e7edf4); color: var(--ink); padding: 16px; -webkit-font-smoothing: antialiased; }
+        @keyframes mvFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        @keyframes mvUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+        ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-thumb { background: #b9c8d8; border-radius: 10px; border: 2px solid #f1f5f9; } ::-webkit-scrollbar-track { background: transparent; }
+        ::selection { background: rgba(15,76,129,.18); }
+        .portal { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: 20px; border: 1px solid var(--line); box-shadow: var(--shadow); padding: 24px 28px 28px; animation: mvFade .45s ease-out; }
+        /* header */
+        .dept-brand { gap: 12px; }
+        .dept-brand i { animation: none !important; background: var(--primary); color: #fff !important; border-radius: 12px; padding: 11px; font-size: 1.3rem; }
+        .heartbeat { animation: none; }
+        .dept-brand h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -.01em; background: none; -webkit-text-fill-color: var(--ink); color: var(--ink); }
+        .dept-brand small { background: #eef3f8; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 3px 10px; font-size: .78rem; }
+        .vcet-brand { background: #f6f9fc; border: 1px solid var(--line); border-radius: 14px; backdrop-filter: none; padding: 6px 14px 6px 8px; gap: 12px; }
+        .vcet-logo { animation: none; background: var(--primary); box-shadow: none; border-radius: 12px; width: 42px; height: 42px; font-size: .85rem; }
+        .vcet-text { color: var(--ink); } .vcet-text small { color: var(--muted); }
+        .scope-line { animation: none; background: var(--line); opacity: 1; height: 1px; margin: 16px 0 10px; }
+        .slogan-container { background: var(--primary-d); border-radius: 10px; padding: 7px 0; animation: none; box-shadow: none; }
+        .slogan-text { font-size: .82rem; font-weight: 500; letter-spacing: .2px; animation-duration: 60s; }
+        .slogan-text .heart-icon { animation: none; color: #fff; opacity: .8; } .slogan-text i { color: rgba(255,255,255,.55) !important; }
+        /* buttons */
+        .btn-primary, .btn-success, .btn-danger, .btn-info, .btn-outline { border-radius: 10px; box-shadow: none; letter-spacing: 0; }
+        .btn-primary { background: var(--primary); } .btn-primary::after { display: none; }
+        .btn-primary:hover { background: var(--primary-d); transform: translateY(-1px); box-shadow: 0 8px 16px -10px rgba(15,76,129,.7); }
+        .btn-success { background: #1f8a4c; } .btn-success:hover { background: #18723e; box-shadow: 0 8px 16px -10px rgba(31,138,76,.7); }
+        .btn-danger { background: #c9323f; } .btn-danger:hover { background: #ab2833; box-shadow: 0 8px 16px -10px rgba(201,50,63,.7); }
+        .btn-info { background: var(--accent); } .btn-info:hover { background: #156a84; box-shadow: none; }
+        .btn-outline { border-color: var(--primary); color: var(--primary); } .btn-outline:hover { background: var(--primary); color: #fff; box-shadow: none; }
+        .btn-primary:active, .btn-success:active, .btn-danger:active, .tab-btn:active, .dept-icon-btn:active { transform: scale(.98); }
+        .close-btn { background: #fff; border: 1px solid var(--line); color: var(--muted); border-radius: 10px; padding: 8px 16px; }
+        .close-btn:hover { background: #f1f5f9; color: var(--ink); transform: none; }
+        .btn-primary, .btn-success, .btn-danger, .tab-btn, .dept-icon-btn, .welcome-admin-btn { position: relative; overflow: hidden; }
+        .mv-ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,.35); transform: scale(0); animation: mvRipple .6s ease-out forwards; pointer-events: none; }
+        @keyframes mvRipple { to { transform: scale(3.2); opacity: 0; } }
+        /* login + welcome */
+        .login-card { background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); backdrop-filter: none; padding: 36px; animation: mvFade .4s ease-out; }
+        .login-card h2 { font-size: 1.5rem; color: var(--ink); }
+        .tab-container { background: #eef3f8; border-radius: 12px; padding: 4px; }
+        .tab-btn { border-radius: 9px; color: var(--muted); } .tab-btn.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(15,42,67,.18); transform: none; }
+        .tab-btn:hover:not(.active) { background: rgba(255,255,255,.6); transform: none; }
+        .login-input { border-radius: 12px; background: #fff; border: 1px solid #cfdbe7; padding: 14px 48px 14px 16px; }
+        .login-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,76,129,.14); transform: none; background: #fff; }
+        .welcome-admin-btn { background: #f1f5f9; border: 1px solid var(--line); color: var(--ink); border-radius: 10px; padding: 7px 12px; }
+        .welcome-avatar { animation: none; box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--line); color: var(--primary); }
+        .link-btn { color: var(--primary); }
+        /* dashboard */
+        #dashboardPage > .flex-row { padding: 14px 16px; background: #f6f9fc; border: 1px solid var(--line); border-radius: 14px; gap: 12px; margin: 12px 0 0 !important; }
+        #dashboardPage > .flex-row .connection-status, #dashboardPage > .flex-row .badge { display: none; }
+        .user-avatar { width: 46px; height: 46px; background: var(--primary); box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--line); animation: none; }
+        #greetingUser { font-size: 1.05rem !important; color: var(--ink); }
+        .name-display { background: #e9f5ee; border: 1px solid #cfe7d8; color: #1f6b3d; }
+        .admin-badge { animation: none; background: var(--primary); border-radius: 6px; }
+        .dept-icon-btn { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; color: var(--ink); backdrop-filter: none; }
+        .dept-icon-btn:hover { background: #f1f5f9; transform: none; box-shadow: none; border-color: #b8c9da; }
+        .dept-icon-btn i { color: var(--primary); } .dept-icon-btn span { font-size: .8rem !important; }
+        .dash-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin-top: 16px; }
+        .glass-card { display: grid; grid-template-columns: 52px 1fr; grid-template-rows: auto auto; column-gap: 14px; row-gap: 2px; align-items: center; text-align: left; padding: 16px 18px; border-radius: 16px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); backdrop-filter: none; animation: mvUp .45s ease-out both; }
+        .glass-card:nth-child(1) { animation-delay: .03s; } .glass-card:nth-child(2) { animation-delay: .07s; } .glass-card:nth-child(3) { animation-delay: .11s; } .glass-card:nth-child(4) { animation-delay: .15s; }
+        .glass-card:nth-child(5) { animation-delay: .19s; } .glass-card:nth-child(6) { animation-delay: .23s; } .glass-card:nth-child(7) { animation-delay: .27s; } .glass-card:nth-child(8) { animation-delay: .31s; }
+        .glass-card i { grid-row: 1 / 3; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; padding: 0; border-radius: 14px; background: #eaf2f9; color: var(--primary); font-size: 1.35rem; transition: all .25s; }
+        .glass-card h4 { margin: 0; font-size: 1rem; color: var(--ink); align-self: end; }
+        .glass-card span:not(.notification-badge) { align-self: start; font-size: .8rem !important; color: var(--muted) !important; }
+        .glass-card:hover { transform: translateY(-3px); background: #fff; border-color: #9db7cf; box-shadow: 0 16px 30px -18px rgba(15,42,67,.4); }
+        .glass-card:hover i { transform: none; background: var(--primary); color: #fff; }
+        .glass-card:active { transform: scale(.98); }
+        .dash-grid .glass-card:nth-child(-n+2) { background: linear-gradient(135deg, #0f4c81, #0b3a63); border-color: transparent; padding: 22px 20px; }
+        .dash-grid .glass-card:nth-child(-n+2):hover { background: linear-gradient(135deg, #125a98, #0d4474); }
+        .dash-grid .glass-card:nth-child(-n+2) h4 { color: #fff; font-size: 1.1rem; }
+        .dash-grid .glass-card:nth-child(-n+2) span:not(.notification-badge) { color: rgba(255,255,255,.78) !important; }
+        .dash-grid .glass-card:nth-child(-n+2) i { background: rgba(255,255,255,.14); color: #fff; }
+        .dash-grid .glass-card:nth-child(-n+2):hover i { background: #fff; color: var(--primary); }
+        #approvalsCard[style*="block"], #monitoringCard[style*="block"] { display: grid !important; }
+        .glass-card .notification-badge { top: 10px; right: 12px; box-shadow: none; border: 2px solid #fff; }
+        .dept-icon-btn.top-search { background: var(--primary); border-color: var(--primary); color: #fff; padding: 9px 20px; }
+        .dept-icon-btn.top-search i, .dept-icon-btn.top-search span { color: #fff; font-weight: 600; }
+        .dept-icon-btn.top-search:hover { background: var(--primary-d); border-color: var(--primary-d); }
+        /* inner pages */
+        .page-container { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 24px; box-shadow: none; backdrop-filter: none; animation: mvFade .35s ease-out; }
+        .page-header h2 { font-size: 1.25rem; color: var(--ink); }
+        .page-container [style*="border-radius:24px"] { border-radius: 14px !important; background: #f8fafc !important; border: 1px solid #edf1f5; }
+        .category-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: none; padding: 16px; }
+        .category-card:hover { background: #fff; border-color: #9db7cf; transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(15,42,67,.35); }
+        .category-card:nth-child(1) { animation-delay: .02s; } .category-card:nth-child(2) { animation-delay: .06s; } .category-card:nth-child(3) { animation-delay: .1s; } .category-card:nth-child(4) { animation-delay: .14s; } .category-card:nth-child(n+5) { animation-delay: .18s; }
+        .file-list { background: #f8fafc; border-radius: 14px; }
+        .file-item { border-radius: 10px; border-bottom: 1px solid #edf1f5; }
+        .file-item:hover { background: #f4f8fb; transform: none; }
+        .file-item .file-actions button { border-radius: 8px; padding: 6px 12px; }
+        .approval-request { background: #fff; border: 1px solid var(--line); border-left-width: 5px; border-radius: 14px; }
+        .approval-request:hover { background: #fff; transform: none; box-shadow: 0 12px 24px -18px rgba(15,42,67,.35); }
+        .approval-request .request-details { background: #f6f9fc; }
+        .approval-request .request-actions button { border-radius: 10px; }
+        .approval-request .pending-badge { animation: none; border-radius: 8px; }
+        .monitoring-item { background: #f8fafc; border: 1px solid #edf1f5; border-left: 3px solid var(--primary); border-radius: 10px; }
+        .profile-section { background: #f8fafc; border: 1px solid var(--line); border-radius: 14px; box-shadow: none; }
+        .feature-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+        .feature-card:hover { transform: translateY(-2px); background: #fff; box-shadow: 0 12px 24px -16px rgba(15,42,67,.35); }
+        .dept-image-placeholder { background: linear-gradient(135deg, #0f4c81, #0b3a63); border-radius: 16px; }
+        .dept-image-placeholder::before { display: none; } .dept-image-placeholder .dept-icons i { animation: none; }
+        .modal { background: rgba(15,42,67,.45); backdrop-filter: blur(3px); } .modal-content { border-radius: 18px; box-shadow: 0 24px 60px -20px rgba(0,0,0,.4); }
+        /* ================= MODERN SIGNATURE LAYER (visual only) ================= */
+        body { background-color: #eef3f8; background-image: radial-gradient(rgba(15,76,129,.075) 1px, transparent 1.3px), radial-gradient(900px 520px at 6% -6%, rgba(27,127,158,.12), transparent 62%), radial-gradient(820px 520px at 104% 104%, rgba(15,76,129,.12), transparent 62%); background-size: 22px 22px, auto, auto; background-attachment: fixed; }
+        .scope-line { height: 26px; border-radius: 0; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='26' viewBox='0 0 240 26'%3E%3Cpath d='M0 13 H70 L78 13 L84 5 L92 22 L98 8 L104 13 H150 L156 13 L162 9 L168 17 L174 13 H240' fill='none' stroke='%231b7f9e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") repeat-x center / 240px 26px; opacity: .5; margin: 10px 0 6px; animation: mvEcg 10s linear infinite; }
+        .scope-line::before, .scope-line::after { display: none; }
+        @keyframes mvEcg { to { background-position-x: -240px; } }
+        #dashboardPage > .flex-row { position: relative; overflow: hidden; background: linear-gradient(120deg, #f7fafd, #edf3f9); }
+        #dashboardPage > .flex-row::before { content: ''; position: absolute; right: -10px; top: 0; bottom: 0; width: 340px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='26' viewBox='0 0 240 26'%3E%3Cpath d='M0 13 H70 L78 13 L84 5 L92 22 L98 8 L104 13 H150 L156 13 L162 9 L168 17 L174 13 H240' fill='none' stroke='%231b7f9e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / 340px 38px; opacity: .13; pointer-events: none; }
+        #dashboardPage > .flex-row > div { position: relative; z-index: 1; }
+        .hello-line { display: block; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 1px; animation: mvFade .6s ease-out; }
+        .page-header h2 { position: relative; padding-left: 14px; }
+        .page-header h2::before { content: ''; position: absolute; left: 0; top: 14%; height: 72%; width: 4px; border-radius: 4px; background: linear-gradient(var(--primary), var(--accent)); }
+        .glass-card { position: relative; overflow: hidden; }
+        .glass-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(15,76,129,.09), transparent 65%); opacity: 0; transition: opacity .3s; pointer-events: none; }
+        .glass-card:hover::before { opacity: 1; }
+        .glass-card::after { content: '\203A'; position: absolute; right: 16px; top: 50%; font-size: 1.8rem; line-height: 1; color: var(--muted); opacity: 0; transform: translate(-8px, -52%); transition: all .25s; }
+        .glass-card:hover::after { opacity: .75; transform: translate(0, -52%); }
+        .dash-grid .glass-card:nth-child(-n+2)::before { background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.17), transparent 65%); }
+        .dash-grid .glass-card:nth-child(-n+2)::after { color: #fff; }
+        .glass-card i { background: var(--hb, #eaf2f9); color: var(--h, var(--primary)); }
+        .glass-card:hover i { background: var(--h, var(--primary)); color: #fff; transform: scale(1.05); }
+        .dash-grid .glass-card:nth-child(3) { --h: #0c7c7c; --hb: #e1f3f3; }
+        .dash-grid .glass-card:nth-child(4) { --h: #4353b8; --hb: #e8ebfa; }
+        .dash-grid .glass-card:nth-child(5) { --h: #b26a00; --hb: #fcefd9; }
+        .dash-grid .glass-card:nth-child(6) { --h: #6a4bb0; --hb: #eee8f8; }
+        .dash-grid .glass-card:nth-child(7) { --h: #3d5a73; --hb: #e6edf3; }
+        .dash-grid .glass-card:nth-child(-n+2) i { background: rgba(255,255,255,.14); color: #fff; }
+        .dash-grid .glass-card:nth-child(-n+2):hover i { background: #fff; color: var(--primary); }
+        .category-card { position: relative; overflow: hidden; }
+        .category-card::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--primary), var(--accent)); transform: scaleX(0); transform-origin: left; transition: transform .35s ease; }
+        .category-card:hover::after { transform: scaleX(1); }
+        .btn-primary { background-image: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,0)); }
+        /* top search bar */
+        .top-search-bar { position: sticky; top: 8px; z-index: 60; max-height: 0; opacity: 0; overflow: hidden; margin: 0; transform: translateY(-8px); transition: max-height .35s ease, opacity .25s ease, margin .3s ease, transform .3s ease; }
+        .top-search-bar.open { max-height: 80px; opacity: 1; margin-top: 12px; overflow: visible; transform: none; }
+        .top-search-bar form { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #bcd0e2; border-radius: 14px; padding: 5px 8px 5px 16px; box-shadow: 0 16px 32px -18px rgba(15,42,67,.5); }
+        .top-search-bar form:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,76,129,.14), 0 16px 32px -18px rgba(15,42,67,.5); }
+        .top-search-bar input { flex: 1; min-width: 0; border: 0; outline: 0; font-size: 1rem; font-family: inherit; padding: 11px 0; background: transparent; color: var(--ink); }
+        .top-search-bar .ts-ico { color: var(--primary); }
+        .top-search-bar .ts-close { background: #f1f5f9; border: 0; width: 34px; height: 34px; border-radius: 10px; color: var(--muted); cursor: pointer; transition: background .2s; } .top-search-bar .ts-close:hover { background: #e3eaf1; }
+        #pageContainer { scroll-margin-top: 84px; }
+        /* ================= LAYOUT + SECTION DESIGN (visual only) ================= */
+        .slogan-text { animation-duration: 32s; }
+        .top-search-bar { max-height: none; opacity: 1; overflow: visible; margin: 12px 0 0; transform: none; }
+        .top-search-bar form { padding: 5px 5px 5px 18px; }
+        .top-search-bar .ts-go { flex: 0 0 auto; width: 46px; height: 46px; border: 0; border-radius: 11px; background: var(--primary); color: #fff; font-size: 1.05rem; cursor: pointer; transition: background .2s, transform .15s; }
+        .top-search-bar .ts-go:hover { background: var(--primary-d); } .top-search-bar .ts-go:active { transform: scale(.94); }
+        /* file lists: compact + aligned so less scrolling */
+        .file-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 10px; background: transparent; padding: 0; border-radius: 0; }
+        .file-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; margin: 0; background: #fff; border: 1px solid var(--line); border-radius: 12px; transition: border-color .2s, box-shadow .2s, transform .2s; }
+        .file-item:hover { background: #fff; border-color: #9db7cf; box-shadow: 0 10px 22px -16px rgba(15,42,67,.4); transform: translateY(-1px); }
+        .file-item > .file-info { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+        .file-item > .file-info > i { flex: 0 0 40px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: #f1f5f9; font-size: 1.15rem; }
+        .file-item > .file-info > div, .file-item > div:first-child:not(.file-info) { min-width: 0; flex: 1; }
+        .file-item > .file-info > div > div:first-child, .file-item > div:first-child:not(.file-info) > div:first-child { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; font-size: .92rem; line-height: 1.3; color: var(--ink); }
+        .file-item .file-actions { display: flex; gap: 6px; flex: 0 0 auto; margin: 0; }
+        .file-actions button { min-width: 38px; height: 38px; border: 0; border-radius: 10px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: .82rem; font-family: inherit; cursor: pointer; transition: filter .2s, transform .15s; }
+        .file-actions button:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: none; }
+        .btn-preview { background: #e6f3f7; color: #0b6b82; } .btn-preview:hover { background: #d8ecf3; }
+        .btn-delete { background: #fdecee; color: #c9323f; } .btn-delete:hover { background: #f9d9dd; }
+        .btn-rename { background: #eef1fb; color: #4353b8; } .btn-rename:hover { background: #dfe5f8; }
+        /* subject tiles: compact horizontal cards */
+        .page-container [style*="minmax(180px"] { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)) !important; gap: 10px !important; }
+        .category-card { display: grid; grid-template-columns: 44px 1fr auto; grid-template-rows: auto auto; column-gap: 12px; row-gap: 1px; align-items: center; text-align: left; padding: 12px 14px; cursor: pointer; }
+        .category-card > i { grid-row: 1 / 3; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: #eaf2f9; font-size: 1.2rem !important; }
+        .category-card h4 { margin: 0; font-size: .95rem; color: var(--ink); align-self: end; word-break: break-word; }
+        .category-card .file-count { align-self: start; font-size: .78rem; color: var(--muted); margin: 0; }
+        .category-card .admin-actions { grid-row: 1 / 3; grid-column: 3; margin: 0; justify-content: flex-end; }
+        /* sections: stats, upload, approvals, history */
+        .stats-grid { gap: 12px; }
+        .stats-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px 16px 16px 20px; text-align: left; position: relative; overflow: hidden; box-shadow: none; }
+        .stats-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(var(--primary), var(--accent)); }
+        .stats-card:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(15,42,67,.35); }
+        .stats-card .stat-number { color: var(--ink); font-size: 1.7rem; }
+        .monitoring-item { padding: 9px 12px; margin-bottom: 6px; }
+        .subject-select { border-radius: 12px; background: #fff; border: 1px solid #cfdbe7; padding: 12px 16px; }
+        .subject-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,76,129,.14); background: #fff; }
+        .file-upload-area { border: 2px dashed #b9cde0; border-radius: 16px; background: #f8fbfd; padding: 34px 20px; }
+        .file-upload-area:hover, .file-upload-area.dragover { border-color: var(--primary); background: #f0f6fb; transform: none; }
+        .page-container [style*="rgba(255,193,7"] { background: #fff8e6 !important; border-radius: 12px !important; }
+        .approval-request { padding: 16px; margin-bottom: 12px; }
+        .approval-request .request-title { font-weight: 600; color: var(--ink); }
+        .request-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .request-actions button { border: 0; border-radius: 10px; padding: 9px 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; cursor: pointer; transition: filter .2s, transform .15s; }
+        .request-actions button:hover { filter: brightness(1.07); transform: translateY(-1px); }
+        .btn-approve { background: #1f8a4c; color: #fff; } .btn-reject, .request-actions button[class*="reject"] { background: #c9323f; color: #fff; } .btn-preview-request { background: #e6f3f7; color: #0b6b82; }
+        @media (max-width: 600px) {
+            .file-list { grid-template-columns: 1fr; gap: 8px; }
+            .btn-preview { font-size: 0; padding: 0; width: 38px; } .btn-preview i { font-size: .95rem; }
+            .page-container [style*="minmax(180px"] { grid-template-columns: 1fr !important; gap: 8px !important; }
+            .stats-card .stat-number { font-size: 1.4rem; }
+        }
+        /* ===== file rows: fix alignment (beats the older mobile rules) ===== */
+        .page-container .file-item { flex-direction: row !important; align-items: center !important; justify-content: space-between !important; text-align: left !important; gap: 12px; }
+        .page-container .file-item .file-info { justify-content: flex-start !important; text-align: left; }
+        .page-container .file-item .file-actions { width: auto !important; flex: 0 0 auto !important; flex-wrap: nowrap !important; justify-content: flex-end !important; }
+        .page-container .file-item .file-actions button { min-width: 38px; height: 38px; padding: 0 12px; border-radius: 10px; font-size: .82rem; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+        .page-container .file-item .file-actions button i { margin: 0; }
+        @media (max-width: 600px) {
+            .page-container .file-item { padding: 10px; gap: 8px; }
+            .page-container .file-item .file-actions { gap: 5px; }
+            .page-container .file-item .file-actions button { width: 36px; min-width: 36px; height: 36px; padding: 0 !important; font-size: 0 !important; }
+            .page-container .file-item .file-actions button i { font-size: .95rem; }
+            .page-container .file-item > .file-info > i { flex-basis: 34px; width: 34px; height: 34px; font-size: 1rem; }
+        }
+        /* popup notifications (fade in, fade out) */
+        #toastBox { position: fixed; top: 78px; right: 16px; z-index: 9000; display: flex; flex-direction: column; gap: 10px; width: min(360px, calc(100vw - 28px)); pointer-events: none; }
+        .mv-toast { pointer-events: auto; display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 12px; padding: 12px 14px; box-shadow: 0 14px 32px -14px rgba(15,42,67,.4); cursor: pointer; font-family: 'Inter', sans-serif; animation: mvToastIn .4s ease both; }
+        .mv-toast.out { animation: mvToastOut .6s ease forwards; }
+        .ti { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #eef3f8; color: var(--c); }
+        .tx { min-width: 0; flex: 1; } .tt { font-weight: 600; font-size: .88rem; color: var(--ink); } .tm { font-size: .8rem; color: var(--muted); word-break: break-word; }
+        @keyframes mvToastIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+        @keyframes mvToastOut { to { opacity: 0; transform: translateY(-8px); } }
+        @media (max-width: 600px) {
+            body { padding: 10px; } .portal { padding: 16px; border-radius: 16px; }
+            .dept-brand h1 { font-size: 1.2rem; } .login-card { padding: 24px 18px; } .page-container { padding: 16px; }
+            .dash-grid { grid-template-columns: 1fr; gap: 10px; } .glass-card { padding: 14px 16px; } .dash-grid .glass-card:nth-child(-n+2) { padding: 18px 16px; }
+            #toastBox { top: 76px; right: 14px; left: 14px; width: auto; }
+            #dashboardPage > .flex-row > div:last-child { width: 100%; } .dept-icon-btn.top-search { flex: 1 1 100%; justify-content: center; order: -1; padding: 12px 20px; }
+        }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
     </style>
 </head>
 <body>
-<!-- ================= MAINTENANCE SCREEN =================
-     Covers the whole site (login page included) while MAINTENANCE_MODE is true.
-     When fixes are done, set MAINTENANCE_MODE = false below. -->
-<div id="splashScreen" role="status">
+<!-- ================= SPLASH / LOADING SCREEN =================
+     Shows an animated "Website is getting ready" screen until the data is loaded.
+     Set MAINTENANCE_MODE = true below to show a "maintenance" screen instead. -->
+<div id="splashScreen" role="status" aria-live="polite">
     <div class="sp-orb o1"></div><div class="sp-orb o2"></div><div class="sp-orb o3"></div>
-    <div class="sp-logo" style="animation:none;"><div class="sp-core" style="animation:none;"><i class="fas fa-screwdriver-wrench"></i></div></div>
+    <div class="sp-logo"><div class="sp-core"><i class="fas fa-heartbeat"></i></div></div>
     <div class="sp-title">Medi Electro <span>Vault</span></div>
-    <div class="sp-msg" style="animation:none; font-size:1.25rem;">Website is under maintenance</div>
-    <div class="sp-status" style="animation:none; max-width:320px; line-height:1.5; font-size:0.95rem;">We are fixing a few things to make it better. Please check back soon.</div>
+    <svg class="sp-ecg" viewBox="0 0 260 44" preserveAspectRatio="none"><path d="M0 22 H70 L82 22 L92 6 L104 38 L114 12 L122 22 H170 L180 22 L188 14 L196 30 L204 22 H260"/></svg>
+    <div class="sp-msg"><span id="spText"></span><span class="sp-dots"><span>.</span><span>.</span><span>.</span></span></div>
+    <div class="sp-bar"><div class="sp-bar-fill" id="spFill"></div></div>
+    <div class="sp-status" id="spStatus"><i class="fas fa-circle-notch fa-spin"></i>Starting up</div>
 </div>
 <script>
 (function () {
-    var MAINTENANCE_MODE = true; // set to false when the fixes are finished
+    var MAINTENANCE_MODE = false; // true = show maintenance screen and never open the site
+    var MIN_SHOW = 2600, started = Date.now(), finished = false, progress = 8;
     var splash = document.getElementById('splashScreen');
+    var fill = document.getElementById('spFill'), statusEl = document.getElementById('spStatus'), textEl = document.getElementById('spText');
     document.documentElement.style.overflow = 'hidden';
+
+    if (MAINTENANCE_MODE) {
+        ['.sp-ecg', '.sp-bar', '.sp-dots'].forEach(function (q) { var e = splash.querySelector(q); if (e) e.style.display = 'none'; });
+        splash.querySelector('.sp-core i').className = 'fas fa-screwdriver-wrench';
+        textEl.textContent = 'Website is under maintenance';
+        statusEl.textContent = 'We are fixing a few things to make it better. Please check back soon.';
+        window.splashStep = function () {};
+        window.splashReady = function () {};
+        return;
+    }
+
+    // Pure animation: plays for a fixed time, never waits for (or mentions) the network.
+    var SPLASH_MS = 2600;
+    'Website is getting ready'.split('').forEach(function (ch, i) {
+        var s = document.createElement('span');
+        s.className = ch === ' ' ? 'sp-l sp-sp' : 'sp-l';
+        s.style.animationDelay = (i * 0.07) + 's';
+        s.innerHTML = ch === ' ' ? '&nbsp;' : ch;
+        textEl.appendChild(s);
+    });
+    // Same look as before (progress bar + status line), but driven only by a timer, never by the network.
+    function setStatus(icon, text) { statusEl.innerHTML = '<i class="fas ' + icon + '"></i>' + text; }
+    function setProgress(p) { fill.style.width = p + '%'; }
+    setProgress(12);
+    setTimeout(function () { setProgress(40); setStatus('fa-circle-notch fa-spin', 'Getting things ready'); }, 800);
+    setTimeout(function () { setProgress(72); }, 1500);
+    setTimeout(function () { setProgress(100); setStatus('fa-check-circle', 'Website is ready!'); }, SPLASH_MS - 650);
     window.splashStep = function () {};
-    window.splashReady = function () {
-        if (MAINTENANCE_MODE) return; // stay on this screen, never reveal the login page
+    window.splashReady = function () {};
+    setTimeout(function () {
         document.documentElement.style.overflow = '';
         splash.classList.add('hide');
         setTimeout(function () { splash.remove(); }, 900);
-    };
+    }, SPLASH_MS);
 })();
 </script>
 
@@ -513,9 +756,22 @@
     </div>
 
     <!-- LOGIN PAGE -->
+    <!-- WELCOME (returning student / faculty: one tap, no password) -->
+    <div id="welcomePage" class="hidden fade-in">
+        <div class="login-card" style="text-align:center; position:relative;">
+            <button type="button" class="welcome-admin-btn" onclick="openAdminLogin()"><i class="fas fa-user-shield"></i> Admin Login</button>
+            <div class="welcome-avatar" id="welcomeAvatar"><i class="fas fa-user-circle"></i></div>
+            <h2 id="welcomeTitle" style="margin-bottom:4px;">Welcome back</h2>
+            <p id="welcomeSub" style="color:#1f5175; margin-bottom:6px;"></p>
+            <button type="button" id="startBtn" class="btn-primary" onclick="startRemembered()" style="width:100%; margin-top:18px; font-size:1.1rem; padding:14px;"><i class="fas fa-play"></i> Start</button>
+            <button type="button" class="link-btn" onclick="switchAccount()">Not you? Sign in with another account</button>
+        </div>
+    </div>
+
     <div id="loginPage" class="fade-in">
         <div class="login-card">
             <h2><i class="fas fa-user-md" style="color:#1f7ea3; margin-right:8px;"></i> Portal Login</h2>
+            <button type="button" id="backToWelcome" class="link-btn hidden" onclick="initWelcome()" style="margin:0 0 6px;"><i class="fas fa-arrow-left"></i> Back</button>
             <p style="text-align:center; color:#1f5175; margin-bottom:4px;">Select your role to continue</p>
             <div class="tab-container">
                 <button class="tab-btn active" data-tab="student"><i class="fas fa-graduation-cap"></i> Student</button>
@@ -564,6 +820,7 @@
                     <img id="avatarImage" style="display:none;" />
                 </div>
                 <div>
+                    <span id="helloLine" class="hello-line"></span>
                     <span id="greetingUser" style="font-weight:600; font-size:1.2rem;">User</span>
                     <span id="roleBadge"></span>
                     <span style="display:block; font-size:0.8rem; color:#1f5a7a;">
@@ -576,9 +833,6 @@
                 <span class="connection-status online" id="connectionStatus">
                     <span class="dot"></span> Real-time Connected
                 </span>
-                <span class="status-badge testing" id="firebaseStatus">
-                    <i class="fas fa-spinner fa-spin"></i> Firebase...
-                </span>
                 <span class="status-badge testing" id="supabaseStatus">
                     <i class="fas fa-spinner fa-spin"></i> Supabase...
                 </span>
@@ -587,7 +841,18 @@
                     <i class="fas fa-university"></i> 
                     <span style="font-size:0.7rem;">About Dept</span>
                 </button>
+                <button class="dept-icon-btn" onclick="logoutUser()" style="margin-left:4px;">
+                    <i class="fas fa-right-from-bracket"></i>
+                    <span style="font-size:0.7rem;">Logout</span>
+                </button>
             </div>
+        </div>
+
+        <div class="top-search-bar" id="topSearchBar">
+            <form onsubmit="return topSearchSubmit(event)">
+                <input type="search" id="topSearchInput" placeholder="Search papers, materials, subjects..." autocomplete="off" oninput="topSearchInput()" />
+                <button type="submit" class="ts-go" aria-label="Search"><i class="fas fa-search"></i></button>
+            </form>
         </div>
 
         <div class="dash-grid">
@@ -605,11 +870,6 @@
                 <i class="fas fa-cloud-upload-alt"></i>
                 <h4>Upload</h4>
                 <span style="font-size:0.75rem; color:#1f5a7a;">+ new file</span>
-            </div>
-            <div class="glass-card" onclick="showPage('search')">
-                <i class="fas fa-search"></i>
-                <h4>Search</h4>
-                <span style="font-size:0.75rem; color:#1f5a7a;">find documents</span>
             </div>
             <div class="glass-card" onclick="showPage('myUploads')">
                 <i class="fas fa-history"></i>
@@ -630,7 +890,7 @@
             <div class="glass-card" onclick="showPage('profile')" id="profileCard">
                 <i class="fas fa-user-cog"></i>
                 <h4>Profile</h4>
-                <span style="font-size:0.75rem; color:#1f5a7a;">settings & email</span>
+                <span style="font-size:0.75rem; color:#1f5a7a;">name & password</span>
             </div>
         </div>
 
@@ -652,384 +912,310 @@
 </div>
 
 <!-- ============================================================ -->
-<!-- FIREBASE + SUPABASE CONNECTION SCRIPT                        -->
+<!-- SUPABASE DATA LAYER (database + realtime + storage)          -->
+<!-- Row-level writes: one device can never overwrite another's   -->
+<!-- data. Only rows that really changed are written.             -->
 <!-- ============================================================ -->
-<script type="module">
-// =============================================================
-// FIREBASE CONFIGURATION
-// =============================================================
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get, child, push, update, remove, onValue, off } from "firebase/database";
-import { getAuth, onAuthStateChanged, signInWithCustomToken } from "firebase/auth";
-import { getStorage } from "firebase/storage";
+<script>
+(function () {
+const SUPABASE_URL = 'https://rzvuowgqoywhtsbghqft.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_J09HQm9q5mbK0Vq7JUJaXw_fXreC_lT';
+const BUCKET = 'pdf-files';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBI5RgA04gKmMaZcUGKRDKs1yCZ0DxtWGU",
-    authDomain: "medi-electro-vault.firebaseapp.com",
-    databaseURL: "https://medi-electro-vault-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "medi-electro-vault",
-    storageBucket: "medi-electro-vault.firebasestorage.app",
-    messagingSenderId: "419811672667",
-    appId: "1:419811672667:web:1e5617fc0d50ef1138357e"
+if (typeof supabase === 'undefined') { console.error('Supabase library failed to load'); return; }
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+});
+window.supabaseClient = sb;
+
+const J = v => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x)) ? Object.fromEntries(Object.entries(x).sort()) : x);
+const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const arr = x => Array.isArray(x) ? x.filter(Boolean) : (x && typeof x === 'object' ? Object.values(x) : []);
+const safeName = n => String(n || 'file').normalize('NFKD').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '').slice(-80) || 'file';
+const DEFAULT_QP = {
+    cat1: ['BME101','BME102','BME103','BME104','BME105','BME106','BME107','BME108'],
+    cat2: ['BME201','BME202','BME203','BME204','BME205','BME206','BME207','BME208'],
+    cat3: ['BME301','BME302','BME303','BME304','BME305','BME306','BME307','BME308']
+};
+const DEFAULT_SM = DEFAULT_QP.cat1.slice();
+
+const DBL = window.DBL = { loaded: false, pending: 0, on: {} };
+const T = { users: [], files: [], reqs: [], hist: [], logs: [], settings: [] };
+const KEY = { app_users: 'users', vault_files: 'files', approval_requests: 'reqs', upload_history: 'hist', activity_log: 'logs', app_settings: 'settings' };
+let S = { files: new Map(), reqs: new Map(), settings: new Map(), users: new Map(), names: {}, hist: new Set(), logs: new Set() };
+const profileListeners = {};
+
+function chk(res) { if (res.error) throw new Error(res.error.message); return res.data || []; }
+const L = {
+    app_users: async () => chk(await sb.from('app_users').select('*')),
+    vault_files: async () => chk(await sb.from('vault_files').select('*').order('uploaded_at', { ascending: true }).limit(5000)),
+    approval_requests: async () => chk(await sb.from('approval_requests').select('*').order('requested_at', { ascending: true }).limit(2000)),
+    upload_history: async () => chk(await sb.from('upload_history').select('*').order('id', { ascending: true }).limit(5000)),
+    activity_log: async () => {
+        const [ra, rb] = await Promise.all([   // both queries at the same time = faster on a slow connection
+            sb.from('activity_log').select('*').eq('kind', 'login').order('ts', { ascending: false }).limit(500),
+            sb.from('activity_log').select('*').eq('kind', 'activity').order('ts', { ascending: false }).limit(500)
+        ]);
+        return chk(ra).reverse().concat(chk(rb).reverse());
+    },
+    app_settings: async () => chk(await sb.from('app_settings').select('*'))
 };
 
-// Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-const firebaseDb = getDatabase(firebaseApp);
-const firebaseAuth = getAuth(firebaseApp);
-const firebaseStorage = getStorage(firebaseApp);
-
-// Make Firebase available globally
-window.firebaseDb = firebaseDb;
-window.firebaseAuth = firebaseAuth;
-window.firebaseStorage = firebaseStorage;
-window.firebaseRef = ref;
-window.firebaseSet = set;
-window.firebaseGet = get;
-window.firebasePush = push;
-window.firebaseUpdate = update;
-window.firebaseRemove = remove;
-window.firebaseOnValue = onValue;
-window.firebaseOff = off;
-
-console.log('🔥 Firebase initialized successfully!');
-
-// =============================================================
-// SUPABASE CONFIGURATION
-// =============================================================
-const SUPABASE_URL = 'https://apxinpazvkvgujcvruod.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_H80DlYfDoXxNycQtz-Z0TA_nV06-Orj';
-
-let supabaseClient = null;
-
-function initSupabase() {
-    try {
-        if (typeof supabase === 'undefined') {
-            console.error('❌ Supabase CDN not loaded');
-            return null;
+// ---------- rows -> app structures ----------
+function buildAppData() {
+    const set = {}; T.settings.forEach(r => set[r.key] = r.value);
+    const qs = set.subjects_question_papers || DEFAULT_QP;
+    const d = { questionPapers: {}, subjectMaterials: { subjects: arr(set.subjects_materials || DEFAULT_SM).slice(), files: {} },
+        uploadHistory: [], approvalRequests: [], approvedRequests: [], userLogins: [], userActivity: [], userEmails: {} };
+    ['cat1', 'cat2', 'cat3'].forEach(c => d.questionPapers[c] = { subjects: arr(qs[c] || DEFAULT_QP[c]).slice(), files: {} });
+    T.files.forEach(r => {
+        const f = { id: r.id, name: r.name, size: num(r.size), type: r.mime_type || '', data: r.file_url, storagePath: r.storage_path || null, uploadedAt: num(r.uploaded_at), uploadedBy: r.uploaded_by || '' };
+        let bucket;
+        if (r.category === 'question_papers') {
+            const c = r.cat || 'cat1';
+            const q = d.questionPapers[c] || (d.questionPapers[c] = { subjects: [], files: {} });
+            if (q.subjects.indexOf(r.subject) === -1) q.subjects.push(r.subject);   // never hide a file
+            bucket = q.files;
+        } else {
+            if (d.subjectMaterials.subjects.indexOf(r.subject) === -1) d.subjectMaterials.subjects.push(r.subject);
+            bucket = d.subjectMaterials.files;
         }
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-            auth: {
-                persistSession: false,
-                autoRefreshToken: false,
-                detectSessionInUrl: false
-            }
-        });
-        window.supabaseClient = supabaseClient;
-        console.log('✅ Supabase client initialized successfully!');
-        return supabaseClient;
-    } catch (error) {
-        console.error('❌ Supabase init error:', error.message);
-        return null;
-    }
-}
-
-// =============================================================
-    // TEST CONNECTIONS
-// =============================================================
-
-async function testFirebaseConnection() {
-    const statusEl = document.getElementById('firebaseStatus');
-    try {
-        if (statusEl) {
-            statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-            statusEl.className = 'status-badge testing';
-        }
-        await set(ref(firebaseDb, 'test_connection'), {
-            timestamp: Date.now(),
-            message: 'Firebase connected!'
-        });
-        const snapshot = await get(child(ref(firebaseDb), 'test_connection'));
-        if (snapshot.exists()) {
-            console.log('✅ Firebase Connected Successfully!');
-            if (statusEl) {
-                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Firebase ✅';
-                statusEl.className = 'status-badge connected';
-            }
-            return true;
-        }
-        throw new Error('No data returned');
-    } catch (error) {
-        console.error('❌ Firebase connection failed:', error.message);
-        if (statusEl) {
-            statusEl.innerHTML = '<i class="fas fa-times-circle"></i> Firebase Error';
-            statusEl.className = 'status-badge disconnected';
-        }
-        return false;
-    }
-}
-
-async function testSupabaseConnection() {
-    const statusEl = document.getElementById('supabaseStatus');
-    try {
-        if (statusEl) {
-            statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-            statusEl.className = 'status-badge testing';
-        }
-        const client = window.supabaseClient;
-        if (!client) throw new Error('Client not initialized');
-        const { data, error } = await client
-            .from('files')
-            .select('*', { count: 'exact', head: true });
-        if (error) {
-            if (error.code === '42P01') {
-                console.log('✅ Supabase Connected (table "files" not found - create it)');
-                if (statusEl) {
-                    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
-                    statusEl.className = 'status-badge connected';
-                }
-                return true;
-            }
-            if (error.code === '42501' || error.message.includes('permission')) {
-                console.log('✅ Supabase Connected (RLS enabled - add policies)');
-                if (statusEl) {
-                    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
-                    statusEl.className = 'status-badge connected';
-                }
-                return true;
-            }
-            throw error;
-        }
-        console.log('✅ Supabase Connected Successfully!');
-        if (statusEl) {
-            statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Supabase ✅';
-            statusEl.className = 'status-badge connected';
-        }
-        return true;
-    } catch (error) {
-        console.error('❌ Supabase connection failed:', error.message);
-        if (statusEl) {
-            statusEl.innerHTML = '<i class="fas fa-times-circle"></i> Supabase Error';
-            statusEl.className = 'status-badge disconnected';
-        }
-        return false;
-    }
-}
-
-// =============================================================
-// USER PROFILE FUNCTIONS - FIREBASE SOURCE OF TRUTH
-// =============================================================
-
-async function getUserProfile(username) {
-    try {
-        const snapshot = await get(child(ref(firebaseDb), `users/${username}`));
-        if (snapshot.exists()) {
-            return snapshot.val();
-        }
-        return null;
-    } catch (error) {
-        console.error('❌ Get profile error:', error.message);
-        return null;
-    }
-}
-
-async function saveUserProfile(username, data) {
-    try {
-        // NOTE: uses update() (not set()) so that saving one field
-        // (e.g. displayName) never wipes out sibling fields already
-        // stored at this path (e.g. avatar, email). This is the fix
-        // for cross-device profile fields clobbering each other.
-        await update(ref(firebaseDb, `users/${username}`), {
-            ...data,
-            username: username,
-            updatedAt: Date.now()
-        });
-        console.log('✅ Profile saved for:', username);
-        return true;
-    } catch (error) {
-        console.error('❌ Save profile error:', error.message);
-        return false;
-    }
-}
-
-function listenToUserProfile(username, callback) {
-    const userRef = ref(firebaseDb, `users/${username}`);
-    onValue(userRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('📡 Profile updated for:', username);
-            if (callback) callback(data);
-        }
+        (bucket[r.subject] = bucket[r.subject] || []).push(f);
     });
+    T.reqs.forEach(r => {
+        const q = { id: r.id, category: r.category, cat: r.cat || null, subject: r.subject, files: arr(r.files), requestedBy: r.requested_by, requestedAt: num(r.requested_at), status: r.status, reviewedAt: num(r.reviewed_at) };
+        (r.status === 'approved' ? d.approvedRequests : d.approvalRequests).push(q);
+    });
+    T.hist.forEach(r => d.uploadHistory.push({ _id: r.id, fileName: r.file_name, category: r.category, subject: r.subject, uploadedBy: r.uploaded_by, uploadedAt: num(r.uploaded_at) }));
+    T.logs.forEach(r => {
+        if (r.kind === 'login') d.userLogins.push({ _id: r.id, username: r.username, role: r.role, timestamp: num(r.ts) });
+        else d.userActivity.push({ _id: r.id, username: r.username, role: r.role, action: r.action, details: r.details, timestamp: num(r.ts) });
+    });
+    return d;
+}
+function buildUsers() { const o = {}; T.users.forEach(u => o[u.username] = { password: u.password, role: u.role, registeredAt: num(u.registered_at) }); return o; }
+function buildNames() { const o = {}; T.users.forEach(u => { if (u.display_name) o[u.username] = u.display_name; }); return o; }
+DBL.buildAppData = buildAppData; DBL.buildUsers = buildUsers; DBL.buildNames = buildNames;
+
+// ---------- app structures -> rows ----------
+function snapshotFromApp(d) {
+    const files = new Map(), reqs = new Map(), settings = new Map();
+    const addF = (category, cat, subject, f) => {
+        if (!f || !f.id) return;
+        files.set(String(f.id), { id: String(f.id), category, cat: cat || null, subject, name: f.name, size: num(f.size), mime_type: f.type || null,
+            file_url: f.data || f.fileUrl || null, storage_path: f.storagePath || null, uploaded_by: f.uploadedBy || null, uploaded_at: num(f.uploadedAt) || Date.now() });
+    };
+    for (const [cat, v] of Object.entries(d.questionPapers || {})) for (const [s, fl] of Object.entries((v && v.files) || {})) arr(fl).forEach(f => addF('question_papers', cat, s, f));
+    for (const [s, fl] of Object.entries((d.subjectMaterials || {}).files || {})) arr(fl).forEach(f => addF('subject_materials', null, s, f));
+    const addR = r => {
+        if (!r || !r.id) return;
+        reqs.set(String(r.id), { id: String(r.id), category: r.category, cat: r.cat || null, subject: r.subject, files: arr(r.files),
+            requested_by: r.requestedBy || null, requested_at: num(r.requestedAt) || Date.now(), status: r.status || 'pending', reviewed_at: num(r.reviewedAt) || null });
+    };
+    arr(d.approvalRequests).forEach(addR); arr(d.approvedRequests).forEach(addR);
+    const qs = {}; ['cat1', 'cat2', 'cat3'].forEach(c => { if (d.questionPapers && d.questionPapers[c]) qs[c] = arr(d.questionPapers[c].subjects); });
+    settings.set('subjects_question_papers', qs);
+    settings.set('subjects_materials', arr((d.subjectMaterials || {}).subjects));
+    return { files, reqs, settings };
+}
+function makeS() {
+    const snap = snapshotFromApp(buildAppData());
+    const n = { files: new Map(), reqs: new Map(), settings: new Map(), users: new Map(), names: buildNames(), hist: new Set(T.hist.map(r => r.id)), logs: new Set(T.logs.map(r => r.id)) };
+    snap.files.forEach((row, id) => n.files.set(id, { j: J(row), row }));
+    snap.reqs.forEach((row, id) => n.reqs.set(id, { j: J(row), row }));
+    snap.settings.forEach((v, k) => n.settings.set(k, J(v)));
+    T.users.forEach(u => n.users.set(u.username, J({ username: u.username, password: u.password, role: u.role, registered_at: num(u.registered_at) })));
+    n.prof = J(T.users.map(u => [u.username, u.avatar || null, u.email || null]).sort());
+    return n;
+}
+function rebaseline() { S = makeS(); }
+function sigOf(x) {
+    return J([[...x.files].map(([k, v]) => [k, v.j]).sort(), [...x.reqs].map(([k, v]) => [k, v.j]).sort(), [...x.settings].sort(), [...x.users].sort(),
+        Object.entries(x.names).sort(), [...x.hist].sort(), [...x.logs].sort(), x.prof]);
 }
 
-// =============================================================
-// FILE FUNCTIONS - SUPABASE STORAGE + FIREBASE DB
-// =============================================================
+// ---------- serialized write queue ----------
+let Q = Promise.resolve();
+function enqueue(fn) {
+    DBL.pending++;
+    Q = Q.then(fn).catch(async e => {
+        console.error('Sync error:', e.message);
+        if (window.showMessage) window.showMessage('Sync problem', 'Could not save your last change. Please check your internet connection and try again.');
+        try { await reloadAll(); } catch (x) {}
+    }).then(() => { DBL.pending--; });
+    return Q;
+}
+const chunks = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
+async function must(p) { const r = await p; if (r.error) throw new Error(r.error.message); return r; }
+async function removeFromStorage(paths) {
+    paths = [...new Set(paths.filter(Boolean))];
+    if (!paths.length) return;
+    try { await sb.storage.from(BUCKET).remove(paths); } catch (e) { console.warn('Storage cleanup warning:', e.message); }
+}
 
-async function uploadFileToSupabase(file, path) {
+DBL.syncAppData = function (d) {
+    if (!DBL.loaded || !d) return;
+    const cur = snapshotFromApp(d);
+    const upF = [], delF = [], upR = [], delR = [], upS = [], rejPaths = [];
+    cur.files.forEach((row, id) => { const j = J(row), o = S.files.get(id); if (!o || o.j !== j) { upF.push(row); S.files.set(id, { j, row }); } });
+    [...S.files.keys()].forEach(id => { if (!cur.files.has(id)) { delF.push(S.files.get(id).row); S.files.delete(id); } });
+    cur.reqs.forEach((row, id) => { const j = J(row), o = S.reqs.get(id); if (!o || o.j !== j) { upR.push(row); if (row.status === 'rejected' && (!o || o.row.status !== 'rejected')) arr(row.files).forEach(f => rejPaths.push(f.storagePath)); S.reqs.set(id, { j, row }); } });
+    [...S.reqs.keys()].forEach(id => { if (!cur.reqs.has(id)) { delR.push(S.reqs.get(id).row); S.reqs.delete(id); } });
+    cur.settings.forEach((v, k) => { const j = J(v); if (S.settings.get(k) !== j) { upS.push({ key: k, value: v }); S.settings.set(k, j); } });
+
+    const histNow = arr(d.uploadHistory), logsNow = arr(d.userLogins).concat(arr(d.userActivity));
+    const newHist = histNow.filter(h => !h._id && !h._q); newHist.forEach(h => h._q = true);
+    const keepH = new Set(histNow.map(h => h._id).filter(Boolean));
+    const delH = [...S.hist].filter(id => !keepH.has(id)); delH.forEach(id => S.hist.delete(id));
+    const newLogs = [];
+    arr(d.userLogins).forEach(l => { if (!l._id && !l._q) { l._q = true; newLogs.push({ it: l, row: { kind: 'login', username: l.username, role: l.role, action: 'Login', details: null, ts: num(l.timestamp) } }); } });
+    arr(d.userActivity).forEach(l => { if (!l._id && !l._q) { l._q = true; newLogs.push({ it: l, row: { kind: 'activity', username: l.username, role: l.role, action: l.action, details: l.details, ts: num(l.timestamp) } }); } });
+    const keepL = new Set(logsNow.map(l => l._id).filter(Boolean));
+    const delL = [...S.logs].filter(id => !keepL.has(id)); delL.forEach(id => S.logs.delete(id));
+
+    if (!(upF.length || delF.length || upR.length || delR.length || upS.length || newHist.length || delH.length || newLogs.length || delL.length)) return;
+    enqueue(async () => {
+        for (const c of chunks(upF, 100)) await must(sb.from('vault_files').upsert(c));
+        if (delF.length) { await must(sb.from('vault_files').delete().in('id', delF.map(r => r.id))); await removeFromStorage(delF.map(r => r.storage_path)); }
+        for (const c of chunks(upR, 50)) await must(sb.from('approval_requests').upsert(c));
+        if (rejPaths.length) await removeFromStorage(rejPaths);
+        if (delR.length) {
+            await must(sb.from('approval_requests').delete().in('id', delR.map(r => r.id)));
+            await removeFromStorage(delR.filter(r => r.status !== 'approved').flatMap(r => arr(r.files).map(f => f.storagePath)));
+        }
+        if (upS.length) await must(sb.from('app_settings').upsert(upS));
+        if (newHist.length) {
+            const r = await must(sb.from('upload_history').insert(newHist.map(h => ({ file_name: h.fileName, category: h.category, subject: h.subject, uploaded_by: h.uploadedBy, uploaded_at: num(h.uploadedAt) }))).select('id'));
+            (r.data || []).forEach((x, i) => { newHist[i]._id = x.id; S.hist.add(x.id); });
+        }
+        if (delH.length) await must(sb.from('upload_history').delete().in('id', delH));
+        for (const c of chunks(newLogs, 200)) {
+            const r = await must(sb.from('activity_log').insert(c.map(x => x.row)).select('id'));
+            (r.data || []).forEach((x, i) => { c[i].it._id = x.id; S.logs.add(x.id); });
+        }
+        if (delL.length) await must(sb.from('activity_log').delete().in('id', delL));
+    });
+};
+
+DBL.syncUsers = function (users) {
+    if (!DBL.loaded || !users) return;
+    const up = [], del = [];
+    Object.entries(users).forEach(([u, r]) => {
+        const row = { username: u, password: r.password, role: r.role || 'student', registered_at: num(r.registeredAt) || Date.now() };
+        const j = J(row); if (S.users.get(u) !== j) { up.push(row); S.users.set(u, j); }
+    });
+    [...S.users.keys()].forEach(u => { if (!(u in users)) { del.push(u); S.users.delete(u); delete S.names[u]; } });
+    if (!up.length && !del.length) return;
+    enqueue(async () => {
+        for (const c of chunks(up, 100)) await must(sb.from('app_users').upsert(c));
+        for (const c of chunks(del, 100)) await must(sb.from('app_users').delete().in('username', c));
+    });
+};
+
+DBL.syncNames = function (data) {
+    if (!DBL.loaded || !data) return;
+    const ch = [];
+    Object.entries(data).forEach(([u, name]) => { if (name && S.names[u] !== name && S.users.has(u)) { ch.push([u, name]); S.names[u] = name; } });
+    if (!ch.length) return;
+    enqueue(async () => { for (const [u, name] of ch) await must(sb.from('app_users').update({ display_name: name, updated_at: Date.now() }).eq('username', u)); });
+};
+
+// ---------- profile (display name + avatar) ----------
+window.saveUserProfile = async function (username, data) {
     try {
-        if (!supabaseClient) throw new Error('Supabase not initialized');
-        const filePath = path || `uploads/${Date.now()}_${file.name}`;
-        const { data, error } = await supabaseClient.storage
-            .from('pdf-files')
-            .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        const patch = { updated_at: Date.now() };
+        if ('displayName' in data) patch.display_name = data.displayName;
+        if ('avatar' in data) {
+            const a = data.avatar;
+            if (a && String(a).startsWith('data:')) {
+                const m = /^data:image\/(png|jpeg|webp|gif);/.exec(a);
+                if (!m) throw new Error('Unsupported image type. Use PNG, JPG, WEBP or GIF.');
+                const blob = await (await fetch(a)).blob();
+                const p = `avatars/${safeName(username)}.${m[1] === 'jpeg' ? 'jpg' : m[1]}`;
+                await must(sb.storage.from(BUCKET).upload(p, blob, { upsert: true, contentType: blob.type, cacheControl: '60' }));
+                patch.avatar = sb.storage.from(BUCKET).getPublicUrl(p).data.publicUrl + '?v=' + Date.now();
+            } else patch.avatar = a || null;
+        }
+        await must(sb.from('app_users').update(patch).eq('username', username));
+        return true;
+    } catch (e) { console.error('Save profile error:', e.message); if (window.showMessage) window.showMessage('Profile not saved', e.message); return false; }
+};
+window.getUserProfile = async function (username) {
+    const u = T.users.find(x => x.username === username);
+    return u ? { displayName: u.display_name, avatar: u.avatar, username } : null;
+};
+window.listenToUserProfile = function (username, cb) {
+    profileListeners[username] = cb;
+    if (DBL.loaded) { const u = T.users.find(x => x.username === username); if (u && cb) cb({ displayName: u.display_name, avatar: u.avatar, username }); }
+};
+
+// ---------- storage upload ----------
+window.uploadFileToSupabase = async function (file, path) {
+    try {
+        const p = path || `uploads/${Date.now()}_${safeName(file.name)}`;
+        const { error } = await sb.storage.from(BUCKET).upload(p, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });
         if (error) throw new Error(error.message);
-        const { data: urlData } = supabaseClient.storage.from('pdf-files').getPublicUrl(filePath);
-        return { success: true, path: filePath, url: urlData.publicUrl };
-    } catch (error) {
-        console.error('❌ Storage upload error:', error.message);
-        return { success: false, error: error.message };
+        return { success: true, path: p, url: sb.storage.from(BUCKET).getPublicUrl(p).data.publicUrl };
+    } catch (e) { console.error('Storage upload error:', e.message); return { success: false, error: e.message }; }
+};
+
+// ---------- loading, realtime, status ----------
+function setBadge(state) {
+    const el = document.getElementById('supabaseStatus'); if (!el) return;
+    if (state === true) { el.innerHTML = '<i class="fas fa-check-circle"></i> Live'; el.className = 'status-badge connected'; }
+    else if (state === false) { el.innerHTML = '<i class="fas fa-times-circle"></i> Offline'; el.className = 'status-badge disconnected'; }
+    else { el.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...'; el.className = 'status-badge testing'; }
+}
+function emit(tables) {
+    const t = new Set(tables);
+    if (['vault_files', 'approval_requests', 'upload_history', 'activity_log', 'app_settings', 'app_users'].some(x => t.has(x))) DBL.on.appData && DBL.on.appData(buildAppData());
+    if (t.has('app_users')) {
+        DBL.on.users && DBL.on.users(buildUsers());
+        DBL.on.names && DBL.on.names(buildNames());
+        Object.keys(profileListeners).forEach(u => { const r = T.users.find(x => x.username === u); if (r && profileListeners[u]) profileListeners[u]({ displayName: r.display_name, avatar: r.avatar, username: u }); });
     }
 }
+async function loadTables(tables) { await Promise.all(tables.map(async t => { T[KEY[t]] = await L[t](); })); }
+async function reloadAll() { await loadTables(Object.keys(L)); rebaseline(); emit(Object.keys(L)); }
 
-async function saveFileToBoth(fileData) {
-    const results = { firebase: false, supabase: false };
+const dirty = new Set(); let timer = null, busy = false;
+function schedule(table) { if (!L[table]) return; dirty.add(table); clearTimeout(timer); timer = setTimeout(runReload, 350); }
+async function runReload() {
+    if (DBL.pending > 0 || busy) { timer = setTimeout(runReload, 400); return; }
+    const tabs = [...dirty]; dirty.clear(); if (!tabs.length) return;
+    busy = true;
     try {
-        const firebaseRef = ref(firebaseDb, `files/${fileData.id}`);
-        await set(firebaseRef, {
-            id: fileData.id,
-            fileName: fileData.fileName,
-            subject: fileData.subject,
-            uploadedBy: fileData.uploadedBy,
-            uploadedAt: fileData.uploadedAt,
-            fileUrl: fileData.fileUrl || '',
-            type: 'file'
-        });
-        console.log('🔥 Saved to Firebase:', fileData.fileName);
-        results.firebase = true;
-    } catch (error) {
-        console.error('❌ Firebase save error:', error.message);
+        const before = sigOf(S);
+        await loadTables(tabs);
+        const nS = makeS(); const same = sigOf(nS) === before; S = nS;
+        setBadge(true);
+        if (!same) emit(tabs);   // skip pointless re-render when the change was our own write
     }
+    catch (e) { console.error('Reload error:', e.message); setBadge(false); tabs.forEach(t => dirty.add(t)); timer = setTimeout(runReload, 5000); }
+    busy = false;
+}
+
+let started = false;
+DBL.start = async function () {
+    if (started) return; started = true; setBadge(null); if (window.splashStep) window.splashStep(1);
     try {
-        if (supabaseClient) {
-            const { data, error } = await supabaseClient
-                .from('files')
-                .insert([{
-                    file_name: fileData.fileName,
-                    subject: fileData.subject,
-                    uploaded_by: fileData.uploadedBy,
-                    file_url: fileData.fileUrl || '',
-                    uploaded_at: new Date(fileData.uploadedAt).toISOString()
-                }]);
-            if (error) throw error;
-            console.log('📊 Saved to Supabase:', fileData.fileName);
-            results.supabase = true;
-        }
-    } catch (error) {
-        console.error('❌ Supabase save error:', error.message);
+        await loadTables(Object.keys(L)); rebaseline(); DBL.loaded = true; setBadge(true); if (window.splashStep) window.splashStep(2);
+        emit(Object.keys(L));
+        sb.channel('mv-live').on('postgres_changes', { event: '*', schema: 'public' }, p => schedule(p.table))
+          .subscribe(st => { if (st === 'SUBSCRIBED') setBadge(true); else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') setBadge(false); });
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) Object.keys(L).forEach(schedule); });
+        window.addEventListener('online', () => Object.keys(L).forEach(schedule));
+        if (window.initWelcome) window.initWelcome();
+        if (window.afterDataReady) window.afterDataReady();
+        if (window.splashReady) window.splashReady();
+    } catch (e) {
+        console.error('Initial load failed:', e.message); setBadge(false); started = false; setTimeout(DBL.start, 5000);
     }
-    return results;
-}
-
-function listenToFiles(callback) {
-    const filesRef = ref(firebaseDb, 'files');
-    onValue(filesRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('📡 Files updated:', Object.keys(data).length);
-            if (callback) callback(data);
-        } else {
-            if (callback) callback({});
-        }
-    });
-}
-
-function listenToPendingUploads(callback) {
-    const pendingRef = ref(firebaseDb, 'pending_uploads');
-    onValue(pendingRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('📡 Pending uploads updated:', Object.keys(data).length);
-            if (callback) callback(data);
-        } else {
-            if (callback) callback({});
-        }
-    });
-}
-
-async function submitPendingUpload(fileData) {
-    try {
-        const id = fileData.id || Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-        await set(ref(firebaseDb, `pending_uploads/${id}`), {
-            ...fileData,
-            id,
-            status: 'pending',
-            submittedAt: Date.now()
-        });
-        console.log('📤 Pending upload submitted:', fileData.fileName);
-        return { success: true, id };
-    } catch (error) {
-        console.error('❌ Pending upload error:', error.message);
-        return { success: false, error: error.message };
-    }
-}
-
-async function approvePendingUpload(pendingId, fileData) {
-    try {
-        await set(ref(firebaseDb, `files/${pendingId}`), {
-            ...fileData,
-            status: 'approved',
-            approvedAt: Date.now()
-        });
-        await remove(ref(firebaseDb, `pending_uploads/${pendingId}`));
-        console.log('✅ Upload approved:', fileData.fileName);
-        return { success: true };
-    } catch (error) {
-        console.error('❌ Approve error:', error.message);
-        return { success: false, error: error.message };
-    }
-}
-
-async function rejectPendingUpload(pendingId, fileData) {
-    try {
-        await remove(ref(firebaseDb, `pending_uploads/${pendingId}`));
-        if (fileData.storagePath && supabaseClient) {
-            try {
-                await supabaseClient.storage.from('pdf-files').remove([fileData.storagePath]);
-            } catch (e) {
-                console.warn('Storage delete warning:', e.message);
-            }
-        }
-        console.log('❌ Upload rejected:', fileData.fileName);
-        return { success: true };
-    } catch (error) {
-        console.error('❌ Reject error:', error.message);
-        return { success: false, error: error.message };
-    }
-}
-
-// =============================================================
-// EXPOSE FOR GLOBAL USE
-// =============================================================
-window.getUserProfile = getUserProfile;
-window.saveUserProfile = saveUserProfile;
-window.listenToUserProfile = listenToUserProfile;
-window.uploadFileToSupabase = uploadFileToSupabase;
-window.saveFileToBoth = saveFileToBoth;
-window.listenToFiles = listenToFiles;
-window.listenToPendingUploads = listenToPendingUploads;
-window.submitPendingUpload = submitPendingUpload;
-window.approvePendingUpload = approvePendingUpload;
-window.rejectPendingUpload = rejectPendingUpload;
-window.testFirebase = testFirebaseConnection;
-window.testSupabase = testSupabaseConnection;
-
-// =============================================================
-// AUTH STATE LISTENER
-// =============================================================
-onAuthStateChanged(firebaseAuth, (user) => {
-    if (user) {
-        console.log('👤 Firebase Auth: User signed in', user.uid);
-    } else {
-        console.log('👤 Firebase Auth: No user signed in');
-    }
-});
-
-// =============================================================
-// INIT ON LOAD
-// =============================================================
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Initializing Firebase + Supabase...');
-    initSupabase();
-    await testFirebaseConnection();
-    if (window.splashStep) window.splashStep(1);
-    await testSupabaseConnection();
-    if (window.splashStep) window.splashStep(2);
-    if (window.splashReady) window.splashReady();
-    console.log('📁 Firebase + Supabase integration ready!');
-});
+};
+document.addEventListener('DOMContentLoaded', () => DBL.start());
+})();
 </script>
+
 
 <!-- ============================================================ -->
 <!-- APPLICATION CODE - FULLY FUNCTIONAL                          -->
@@ -1135,7 +1321,7 @@ function loadData() {
     return getDefaultData();
 }
 
-// Normalizes data coming back from Firebase (which can turn sparse/empty
+// Normalizes data coming back from the database (which can turn sparse/empty
 // arrays into objects) so every module keeps working with real arrays.
 function normalizeAppData(data) {
     const def = getDefaultData();
@@ -1167,29 +1353,24 @@ function normalizeAppData(data) {
 }
 
 function saveData(data) {
-    localStorage.setItem('mediVaultData', JSON.stringify(data));
-    // Real-time sync: push the full app dataset to Firebase so every
-    // connected user (student/faculty/admin) sees changes instantly.
-    if (window.firebaseDb && window.firebaseRef && window.firebaseSet) {
-        try { window.firebaseSet(window.firebaseRef(window.firebaseDb, 'appData'), data); }
-        catch (e) { console.error('❌ appData realtime sync error:', e.message); }
-    }
+    try { localStorage.setItem('mediVaultData', JSON.stringify(data)); } catch (e) {}
+    saveSeen(data);
+    // Only the rows that really changed are written to Supabase.
+    if (window.DBL) window.DBL.syncAppData(data);
     updateCounts();
     updatePendingBadge();
 }
 
 // Real-time listener: keeps appData in sync across all logged-in users.
 function listenToAppData(callback) {
-    if (!window.firebaseDb || !window.firebaseRef || !window.firebaseOnValue) return;
-    const dataRef = window.firebaseRef(window.firebaseDb, 'appData');
-    window.firebaseOnValue(dataRef, (snapshot) => {
-        if (snapshot.exists()) {
-            appData = normalizeAppData(snapshot.val());
-            localStorage.setItem('mediVaultData', JSON.stringify(appData));
-            console.log('📡 appData synced in real time');
-            if (callback) callback(appData);
-        }
-    });
+    DBL.on.appData = function (d) {
+        const prevApp = appData;
+        appData = normalizeAppData(d);
+        try { notifyAppDiff(prevApp, appData); } catch (e) { console.warn('notify', e); }
+        try { localStorage.setItem('mediVaultData', JSON.stringify(appData)); } catch (e) {}
+        if (callback) callback(appData);
+    };
+    if (DBL.loaded) DBL.on.appData(DBL.buildAppData());
 }
 window.listenToAppData = listenToAppData;
 
@@ -1202,27 +1383,22 @@ function loadUsers() {
 
 function saveUsers(users) {
     localStorage.setItem('mediVaultUsers', JSON.stringify(users));
-    // Real-time sync: every registration/removal/password change is
-    // pushed to Firebase so all users/devices validate against the
-    // same live account list.
-    if (window.firebaseDb && window.firebaseRef && window.firebaseSet) {
-        try { window.firebaseSet(window.firebaseRef(window.firebaseDb, 'registeredUsers'), users); }
-        catch (e) { console.error('❌ registeredUsers realtime sync error:', e.message); }
-    }
+    if (window.DBL) window.DBL.syncUsers(users);
 }
 
 // Real-time listener: keeps registeredUsers in sync across all users.
 function listenToRegisteredUsers(callback) {
-    if (!window.firebaseDb || !window.firebaseRef || !window.firebaseOnValue) return;
-    const usersRef = window.firebaseRef(window.firebaseDb, 'registeredUsers');
-    window.firebaseOnValue(usersRef, (snapshot) => {
-        if (snapshot.exists()) {
-            registeredUsers = snapshot.val();
-            localStorage.setItem('mediVaultUsers', JSON.stringify(registeredUsers));
-            console.log('📡 registeredUsers synced in real time');
-            if (callback) callback(registeredUsers);
-        }
-    });
+    DBL.on.users = function (u) {
+        const prevU = registeredUsers || {};
+        registeredUsers = u;
+        try {
+            if (notifUsersArmed && currentUsername && isAdmin()) Object.keys(u).filter(k => !(k in prevU)).forEach(k => pushNotif('user', 'New user registered', k));
+            notifUsersArmed = true;
+        } catch (e) {}
+        localStorage.setItem('mediVaultUsers', JSON.stringify(registeredUsers));
+        if (callback) callback(registeredUsers);
+    };
+    if (DBL.loaded) DBL.on.users(DBL.buildUsers());
 }
 window.listenToRegisteredUsers = listenToRegisteredUsers;
 
@@ -1235,24 +1411,17 @@ function loadUserNamesData() {
 
 function saveUserNamesData(data) {
     localStorage.setItem('mediVaultUserNames', JSON.stringify(data));
-    // Real-time sync of display names across all users/devices.
-    if (window.firebaseDb && window.firebaseRef && window.firebaseSet) {
-        try { window.firebaseSet(window.firebaseRef(window.firebaseDb, 'userNames'), data); }
-        catch (e) { console.error('❌ userNames realtime sync error:', e.message); }
-    }
+    if (window.DBL) window.DBL.syncNames(data);
 }
 
 // Real-time listener: keeps userNamesData in sync across all users.
 function listenToUserNamesData(callback) {
-    if (!window.firebaseDb || !window.firebaseRef || !window.firebaseOnValue) return;
-    const namesRef = window.firebaseRef(window.firebaseDb, 'userNames');
-    window.firebaseOnValue(namesRef, (snapshot) => {
-        if (snapshot.exists()) {
-            userNamesData = snapshot.val();
-            localStorage.setItem('mediVaultUserNames', JSON.stringify(userNamesData));
-            if (callback) callback(userNamesData);
-        }
-    });
+    DBL.on.names = function (n) {
+        userNamesData = n;
+        localStorage.setItem('mediVaultUserNames', JSON.stringify(userNamesData));
+        if (callback) callback(userNamesData);
+    };
+    if (DBL.loaded) DBL.on.names(DBL.buildNames());
 }
 window.listenToUserNamesData = listenToUserNamesData;
 
@@ -1275,7 +1444,7 @@ function setStoredUserName(username, name) {
 let realtimeSyncStarted = false;
 function initRealtimeSync() {
     if (realtimeSyncStarted) return;
-    if (!window.firebaseDb || !window.firebaseRef || !window.firebaseOnValue) {
+    if (!window.DBL) {
         setTimeout(initRealtimeSync, 300);
         return;
     }
@@ -1424,7 +1593,7 @@ function removeAvatar() {
 
 function saveUserAvatar(username, data) {
     const key = 'userAvatar_' + username;
-    // localStorage is kept only as a fast local cache; Firebase (via
+    // localStorage is kept only as a fast local cache; Supabase (via
     // saveUserProfile -> users/{username}) is the shared source of truth
     // so avatar changes reach every connected device in real time.
     if (data) localStorage.setItem(key, data);
@@ -1513,15 +1682,17 @@ function showPage(page) {
 
 function refreshCurrentPage() {
     const container = document.getElementById('pageContainer');
+    const ae = document.activeElement;
+    if (container && ae && container.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return; // don't wipe what the user is typing
     if (container && container.innerHTML !== '') {
         const h2 = container.querySelector('.page-container h2');
         if (h2) {
             const text = h2.textContent;
             if (text.includes('Question Papers')) renderQuestionPapers(container);
             else if (text.includes('Subject Materials')) renderSubjectMaterials(container);
+            else if (text.includes('My Uploads')) renderMyUploads(container);
             else if (text.includes('Upload')) renderUploadPage(container);
             else if (text.includes('Search')) renderSearchPage(container);
-            else if (text.includes('My Uploads')) renderMyUploads(container);
             else if (text.includes('Approval')) renderApprovalsPage(container);
             else if (text.includes('Monitoring')) renderMonitoringPage(container);
             else if (text.includes('Profile')) renderProfilePage(container);
@@ -1653,9 +1824,9 @@ function renderMonitoringPage(container) {
     const totalUsers = Object.keys(users).length;
     const totalLogins = logins.length;
     const totalUploads = appData.uploadHistory.length;
-    const totalRequests = appData.approvalRequests ? appData.approvalRequests.length : 0;
-    const recentLogins = logins.slice(-10).reverse();
-    const recentActivities = activities.slice(-20).reverse();
+    const totalRequests = (appData.approvalRequests ? appData.approvalRequests.length : 0) + (appData.approvedRequests ? appData.approvedRequests.length : 0);
+    const recentLogins = logins.slice(-20).reverse();
+    const recentActivities = activities.slice(-30).reverse();
 
     let html = `<div class="page-container"><div class="page-header"><h2><i class="fas fa-chart-line" style="color:#0a4b78;"></i> Monitoring Dashboard</h2><button class="close-btn" onclick="showPage('dashboard')"><i class="fas fa-times"></i> Close</button></div>
         <div class="stats-grid">
@@ -1680,13 +1851,11 @@ function renderMonitoringPage(container) {
         const user = validUsers[u];
         const isAdminUser = u === '732925MDR049';
         const userName = userNames[u] || 'Not set';
-        const email = appData.userEmails[u] || '';
         html += `<div class="monitoring-item"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
             <div>${isAdmin() && !isAdminUser ? `<input type="checkbox" class="user-checkbox" data-username="${u}" onchange="updateSelectedCount()" style="margin-right:8px; width:16px; height:16px;" />` : ''}
             <strong>${u}</strong> <span style="font-size:0.75rem; color:#1f5175;">${user.role}</span>
             ${userName!=='Not set' ? `<span style="font-size:0.7rem; color:#075e54;"><i class="fas fa-user" style="color:#0a4b78;"></i> ${userName}</span>` : ''}
-            ${email ? `<span style="font-size:0.7rem; color:#0a4b78;"><i class="fas fa-envelope" style="color:#0a4b78;"></i> ${email}</span>` : ''}
-            </div>${isAdminUser ? '<span style="font-size:0.7rem; color:#dc3545;">(Admin)</span>' : ''}</div></div>`;
+            </div></div></div>`;
     }
     html += `</div></div>
             <div><h4 style="color:#0a2b48; margin-bottom:12px;"><i class="fas fa-clock"></i> Recent Logins</h4><div style="max-height:400px; overflow-y:auto;">`;
@@ -1773,7 +1942,7 @@ function deleteQPSubject(cat, subject) {
     if (files.length > 0 && !confirm(`Subject "${subject}" has ${files.length} files. Delete?`)) return;
     showModal('Delete Subject', `<p>Delete subject "<strong>${subject}</strong>" from ${cat.toUpperCase()}?</p>`, function() {
         const idx = appData.questionPapers[cat].subjects.indexOf(subject);
-                if (idx !== -1) appData.questionPapers[cat].subjects.splice(idx, 1);
+        if (idx !== -1) appData.questionPapers[cat].subjects.splice(idx, 1);
         delete appData.questionPapers[cat].files[subject];
         saveData(appData);
         logUserActivity(currentUsername, currentRole, 'Delete Subject', `Deleted QP subject ${subject}`);
@@ -1872,7 +2041,7 @@ function viewQuestionPapers(cat, subject) {
     if (files.length === 0) html += `<p style="color:#1f5175; text-align:center; padding:20px;">No files uploaded for ${subject}</p>`;
     else html += files.map((file, idx) => `
         <div class="file-item"><div class="file-info"><i class="fas ${getFileIcon(file.name)}" style="color:${getFileColor(file.name)};"></i><div><div style="font-weight:500;">${file.name}</div><div style="font-size:0.75rem; color:#1f5175;">${formatFileSize(file.size)} · ${formatDateShort(file.uploadedAt)}</div></div></div>
-        <div class="file-actions"><button class="btn-preview" onclick="previewFile('${cat}','${subject}',${idx})"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="downloadFile('${cat}','${subject}',${idx})"><i class="fas fa-download"></i></button>${isAdminOrFaculty() ? `<button class="btn-delete" onclick="deleteFile('${cat}','${subject}',${idx})"><i class="fas fa-trash"></i></button>` : ''}</div></div>
+        <div class="file-actions"><button class="btn-preview" onclick="previewFile('${cat}','${subject}',${idx})"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="downloadFile('${cat}','${subject}',${idx})"><i class="fas fa-download"></i></button>${isAdmin() ? `<button class="btn-rename" title="Rename" onclick="renameFile('${cat}','${subject}',${idx})"><i class="fas fa-pen"></i></button>` : ''}${isAdminOrFaculty() ? `<button class="btn-delete" onclick="deleteFile('${cat}','${subject}',${idx})"><i class="fas fa-trash"></i></button>` : ''}</div></div>
     `).join('');
     html += `</div></div>`;
     container.innerHTML = html;
@@ -1901,7 +2070,7 @@ function viewSubjectMaterials(subject) {
     if (files.length === 0) html += `<p style="color:#1f5175; text-align:center; padding:20px;">No materials uploaded for ${subject}</p>`;
     else html += files.map((file, idx) => `
         <div class="file-item"><div class="file-info"><i class="fas ${getFileIcon(file.name)}" style="color:${getFileColor(file.name)};"></i><div><div style="font-weight:500;">${file.name}</div><div style="font-size:0.75rem; color:#1f5175;">${formatFileSize(file.size)} · ${formatDateShort(file.uploadedAt)}</div></div></div>
-        <div class="file-actions"><button class="btn-preview" onclick="previewSMFile('${subject}',${idx})"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="downloadSMFile('${subject}',${idx})"><i class="fas fa-download"></i></button>${isAdminOrFaculty() ? `<button class="btn-delete" onclick="deleteSMFile('${subject}',${idx})"><i class="fas fa-trash"></i></button>` : ''}</div></div>
+        <div class="file-actions"><button class="btn-preview" onclick="previewSMFile('${subject}',${idx})"><i class="fas fa-eye"></i> Preview</button><button class="btn-download" onclick="downloadSMFile('${subject}',${idx})"><i class="fas fa-download"></i></button>${isAdmin() ? `<button class="btn-rename" title="Rename" onclick="renameSMFile('${subject}',${idx})"><i class="fas fa-pen"></i></button>` : ''}${isAdminOrFaculty() ? `<button class="btn-delete" onclick="deleteSMFile('${subject}',${idx})"><i class="fas fa-trash"></i></button>` : ''}</div></div>
     `).join('');
     html += `</div></div>`;
     container.innerHTML = html;
@@ -1961,6 +2130,36 @@ function downloadFile(cat, subject, idx) {
         logUserActivity(currentUsername, currentRole, 'Download File', `Downloaded ${file.name}`);
     }
 }
+// ---- Rename a file (admin only) ----
+function askNewFileName(oldName) {
+    const dot = oldName.lastIndexOf('.');
+    const ext = dot > 0 ? oldName.slice(dot) : '';
+    const input = prompt('Rename file:', oldName);
+    if (input === null) return null;
+    let name = input.trim().replace(/[\\/]+/g, '-');
+    if (!name) { alert('File name cannot be empty'); return null; }
+    if (ext && !name.toLowerCase().endsWith(ext.toLowerCase())) name += ext;   // keep the file type
+    return name === oldName ? null : name;
+}
+function renameFile(cat, subject, idx) {
+    if (!isAdmin()) { alert('Only admin can rename files'); return; }
+    const file = appData.questionPapers[cat].files[subject][idx]; if (!file) return;
+    const name = askNewFileName(file.name); if (!name) return;
+    const old = file.name; file.name = name;
+    saveData(appData);
+    logUserActivity(currentUsername, currentRole, 'Rename File', `Renamed ${old} to ${name}`);
+    viewQuestionPapers(cat, subject);
+}
+function renameSMFile(subject, idx) {
+    if (!isAdmin()) { alert('Only admin can rename files'); return; }
+    const file = appData.subjectMaterials.files[subject][idx]; if (!file) return;
+    const name = askNewFileName(file.name); if (!name) return;
+    const old = file.name; file.name = name;
+    saveData(appData);
+    logUserActivity(currentUsername, currentRole, 'Rename File', `Renamed ${old} to ${name}`);
+    viewSubjectMaterials(subject);
+}
+
 function deleteFile(cat, subject, idx) {
     if (!isAdminOrFaculty()) { alert('Only admin and faculty can delete files'); return; }
     if (confirm('Delete this file?')) {
@@ -2011,7 +2210,7 @@ function submitApprovalRequest(category, cat, subject, files, fileDataArray) {
 }
 
 function renderApprovalsPage(container) {
-    const allRequests = appData.approvalRequests || [];
+    const allRequests = (appData.approvalRequests || []).concat(appData.approvedRequests || []);
     const pending = allRequests.filter(r => r.status === 'pending');
     const approved = allRequests.filter(r => r.status === 'approved');
     const rejected = allRequests.filter(r => r.status === 'rejected');
@@ -2038,18 +2237,17 @@ function showApprovalTab(tab) {
 }
 
 function renderApprovalList(status) {
-    const requests = (appData.approvalRequests || []).filter(r => r.status === status);
+    const requests = (status === 'approved' ? (appData.approvedRequests || []) : (appData.approvalRequests || []).filter(r => r.status === status));
     if (requests.length === 0) return `<p style="color:#1f5175; text-align:center; padding:20px;">No ${status} requests</p>`;
     return requests.map(req => {
         const totalSize = req.files.reduce((s, f) => s + f.size, 0);
         const fileNames = req.files.map(f => f.name).join(', ');
         const requestedBy = req.requestedBy;
-        const email = appData.userEmails[requestedBy] || '';
         const userName = getStoredUserName(requestedBy) || 'Not set';
         return `<div class="approval-request ${status}">
             <div class="request-info"><div class="request-title"><i class="fas fa-file-alt" style="color:#0a4b78;"></i> ${req.category} — ${req.subject} ${req.cat ? `· ${req.cat.toUpperCase()}` : ''}</div>
-            <div class="request-meta"><i class="fas fa-user" style="color:#0a4b78;"></i> ${requestedBy} ${userName!=='Not set' ? `(${userName})` : ''} ${email ? `<i class="fas fa-envelope" style="color:#0a4b78; margin-left:8px;"></i> ${email}` : ''}<br><i class="fas fa-clock" style="color:#0a4b78;"></i> ${formatDateTime(req.requestedAt)}</div></div>
-            <div class="request-details"><div><i class="fas fa-file"></i> <strong>Files:</strong> ${fileNames}</div><div style="margin-top:4px;"><i class="fas fa-weight-hanging"></i> <strong>Total Size:</strong> ${formatFileSize(totalSize)} · ${req.files.length} file(s)</div>${email ? `<div style="margin-top:4px;"><i class="fas fa-envelope"></i> <strong>Email:</strong> ${email}</div>` : `<div style="margin-top:4px; color:#dc3545;"><i class="fas fa-exclamation-triangle"></i> No email set</div>`}</div>
+            <div class="request-meta"><i class="fas fa-user" style="color:#0a4b78;"></i> ${requestedBy} ${userName!=='Not set' ? `(${userName})` : ''} <br><i class="fas fa-clock" style="color:#0a4b78;"></i> ${formatDateTime(req.requestedAt)}</div></div>
+            <div class="request-details"><div><i class="fas fa-file"></i> <strong>Files:</strong> ${fileNames}</div><div style="margin-top:4px;"><i class="fas fa-weight-hanging"></i> <strong>Total Size:</strong> ${formatFileSize(totalSize)} · ${req.files.length} file(s)</div></div>
             ${status === 'pending' && isAdmin() ? `<div class="request-actions"><button class="btn-preview-request" onclick="previewRequestFile('${req.id}',0)"><i class="fas fa-eye"></i> Preview</button><button class="btn-approve" onclick="approveRequest('${req.id}')"><i class="fas fa-check"></i> Approve</button><button class="btn-reject" onclick="rejectRequest('${req.id}')"><i class="fas fa-times"></i> Reject</button></div>` : ''}
             ${status === 'pending' ? `<div style="margin-top:12px;"><span class="pending-badge">⏳ Pending</span></div>` : ''}
             ${status === 'approved' ? `<div style="margin-top:12px;"><span class="status-badge approved-badge">✅ Approved</span></div>` : ''}
@@ -2091,6 +2289,7 @@ function approveRequest(requestId) {
                         size: file.size || 0,
                         type: file.type || 'application/pdf',
                         data: file.data || file.fileUrl,
+                        storagePath: file.storagePath || null,
                         uploadedAt: Date.now(),
                         uploadedBy: request.requestedBy
                     };
@@ -2115,6 +2314,7 @@ function approveRequest(requestId) {
                         size: file.size || 0,
                         type: file.type || 'application/pdf',
                         data: file.data || file.fileUrl,
+                        storagePath: file.storagePath || null,
                         uploadedAt: Date.now(),
                         uploadedBy: request.requestedBy
                     };
@@ -2150,8 +2350,7 @@ function rejectRequest(requestId) {
     if (!confirm(`Reject upload request for "${request.subject}"?`)) return;
     try {
         request.status = 'rejected';
-        const idx = appData.approvalRequests.indexOf(request);
-        if (idx !== -1) appData.approvalRequests.splice(idx, 1);
+        request.reviewedAt = Date.now();
         saveData(appData);
         updatePendingBadge();
         logUserActivity(currentUsername, currentRole, 'Reject Request', `Rejected ${request.subject}`);
@@ -2191,11 +2390,11 @@ function renderUploadPage(container) {
         html += `<div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Category:</label><select class="subject-select" id="uploadCatSelect" onchange="updateUploadCat()">${cats.map(c => `<option value="${c}">${catNames[c]}</option>`).join('')}</select></div>
             <div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Subject:</label><select class="subject-select" id="uploadSubjectSelect">${appData.questionPapers.cat1.subjects.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>
             <p style="color:#1f5175; font-size:0.85rem;"><i class="fas fa-info-circle"></i> Images & PDFs accepted.</p>
-            <p style="color:#0a4b78; font-size:0.8rem; margin-top:4px;"><i class="fas fa-database"></i> Files will be saved to Firebase + Supabase</p>`;
+            <p style="color:#0a4b78; font-size:0.8rem; margin-top:4px;"><i class="fas fa-database"></i> Files will be saved securely in the cloud + Supabase</p>`;
     } else {
         html += `<div style="margin:16px 0;"><label style="font-weight:500; display:block; margin-bottom:8px;">Select Subject:</label><select class="subject-select" id="uploadSMSubjectSelect">${appData.subjectMaterials.subjects.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>
             <p style="color:#1f5175; font-size:0.85rem;"><i class="fas fa-info-circle"></i> PDF and documents accepted.</p>
-            <p style="color:#0a4b78; font-size:0.8rem; margin-top:4px;"><i class="fas fa-database"></i> Files will be saved to Firebase + Supabase</p>`;
+            <p style="color:#0a4b78; font-size:0.8rem; margin-top:4px;"><i class="fas fa-database"></i> Files will be saved securely in the cloud + Supabase</p>`;
     }
     html += `</div>
         <div class="file-upload-area" id="dropZone"><i class="fas fa-cloud-upload-alt" style="font-size:3rem; color:#0a4b78;"></i><p style="margin:12px 0; color:#1f5175;">📁 Drag & drop or click to browse</p><input type="file" id="fileInput" multiple style="display:none;" /><button class="btn-primary" onclick="document.getElementById('fileInput').click()"><i class="fas fa-folder-open"></i> Browse Files</button></div>
@@ -2354,6 +2553,7 @@ async function uploadFilesForApproval(files, subject) {
                     size: file.size,
                     type: file.type,
                     data: file.data,
+                    storagePath: file.storagePath || null,
                     uploadedAt: Date.now(),
                     uploadedBy: currentUsername || 'anonymous'
                 });
@@ -2573,6 +2773,7 @@ document.getElementById('studentForm').addEventListener('submit', function(e) {
     currentRole = 'student';
     logUserLogin(username, 'student');
     loadUserAvatar(username);
+    rememberUser(username, 'student');
     showDashboard(username, 'student', username);
 });
 
@@ -2599,6 +2800,7 @@ document.getElementById('facultyForm').addEventListener('submit', function(e) {
     currentRole = 'faculty';
     logUserLogin(username, 'faculty');
     loadUserAvatar(username);
+    rememberUser(username, 'faculty');
     showDashboard(username, 'faculty', username);
 });
 
@@ -2612,9 +2814,264 @@ document.getElementById('adminForm').addEventListener('submit', function(e) {
         currentRole = 'admin';
         logUserLogin(username, 'admin');
         loadUserAvatar(username);
+        rememberUser(username, 'admin');
         showDashboard(username, 'admin', 'Admin');
     } else alert('Invalid admin credentials');
 });
+
+// ======================== NOTIFICATIONS ========================
+// Predefined messages shown instantly (toast + bell list) whenever somebody
+// else changes something: files, requests, approvals, subjects, new users.
+const NOTIF_TYPES = {
+    file: { icon: 'fa-file-circle-plus', c: '#1f9bd1' }, removed: { icon: 'fa-trash-can', c: '#e5484d' },
+    request: { icon: 'fa-inbox', c: '#f08c00' }, approved: { icon: 'fa-circle-check', c: '#2f9e44' },
+    rejected: { icon: 'fa-circle-xmark', c: '#e5484d' }, subject: { icon: 'fa-book-open', c: '#6f5bd6' },
+    user: { icon: 'fa-user-plus', c: '#0c8f8f' }, info: { icon: 'fa-bell', c: '#1f9bd1' }
+};
+function pushNotif(type, title, msg) {
+    if (!currentUsername) return;
+    showToast({ type: type, title: title, msg: msg });
+    try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
+}
+// Popup only: slides in, stays a few seconds, then fades away by itself.
+function showToast(n) {
+    let box = document.getElementById('toastBox');
+    if (!box) { box = document.createElement('div'); box.id = 'toastBox'; document.body.appendChild(box); }
+    const t = NOTIF_TYPES[n.type] || NOTIF_TYPES.info;
+    const el = document.createElement('div'); el.className = 'mv-toast'; el.style.setProperty('--c', t.c);
+    el.innerHTML = '<div class="ti"><i class="fas ' + t.icon + '"></i></div><div class="tx"><div class="tt"></div><div class="tm"></div></div>';
+    el.querySelector('.tt').textContent = n.title; el.querySelector('.tm').textContent = n.msg;
+    box.appendChild(el);
+    while (box.children.length > 3) box.removeChild(box.firstChild);
+    const close = () => { if (el.classList.contains('out')) return; el.classList.add('out'); setTimeout(() => el.remove(), 600); };
+    el.onclick = close; setTimeout(close, 4500);
+}
+
+function flatFiles(d) {
+    const m = new Map();
+    for (const c in (d.questionPapers || {})) { const fs = d.questionPapers[c].files || {}; for (const s in fs) (fs[s] || []).forEach(f => m.set(String(f.id), { n: f.name, s: s, by: f.uploadedBy })); }
+    const sm = (d.subjectMaterials || {}).files || {}; for (const s in sm) (sm[s] || []).forEach(f => m.set(String(f.id), { n: f.name, s: s, by: f.uploadedBy }));
+    return m;
+}
+function subjSet(d) {
+    const set = new Map();
+    for (const c in (d.questionPapers || {})) (d.questionPapers[c].subjects || []).forEach(s => set.set(c + '|' + s, s));
+    ((d.subjectMaterials || {}).subjects || []).forEach(s => set.set('SM|' + s, s));
+    return set;
+}
+function reqMap(d) {
+    const m = new Map();
+    (d.approvalRequests || []).forEach(r => m.set(String(r.id), { st: r.status || 'pending', by: r.requestedBy, s: r.subject, n: (r.files || []).length }));
+    (d.approvedRequests || []).forEach(r => m.set(String(r.id), { st: 'approved', by: r.requestedBy, s: r.subject, n: (r.files || []).length }));
+    return m;
+}
+let notifArmed = false, notifUsersArmed = false;
+const snapOf = d => ({ files: flatFiles(d), reqs: reqMap(d), subj: subjSet(d) });
+const seenKey = () => 'mvSeen_' + currentUsername;
+let seenReady = false;   // snapshot is only refreshed after the "while you were away" check has run
+// Remember what this user has already seen, so changes made while the app was closed can be announced next time.
+function saveSeen(d) {
+    if (!seenReady || !currentUsername || !d) return;
+    try { const sn = snapOf(d); localStorage.setItem(seenKey(), JSON.stringify({ f: [...sn.files], r: [...sn.reqs], s: [...sn.subj], u: Object.keys(registeredUsers || {}), t: Date.now() })); } catch (e) {}
+}
+function diffNotify(p, c) {
+    const added = [...c.files].filter(([id, f]) => !p.files.has(id) && f.by !== currentUsername).map(x => x[1]);
+    const removed = [...p.files].filter(([id]) => !c.files.has(id)).map(x => x[1]);
+    if (added.length && added.length <= 3) added.forEach(f => pushNotif('file', 'New file added', f.n + ' in ' + f.s));
+    else if (added.length) pushNotif('file', 'New files added', added.length + ' new files were added');
+    if (removed.length && removed.length <= 3) removed.forEach(f => pushNotif('removed', 'File removed', f.n + ' was removed from ' + f.s));
+    else if (removed.length) pushNotif('removed', 'Files removed', removed.length + ' files were removed');
+    c.reqs.forEach((r, id) => { if (!p.reqs.has(id) && r.st === 'pending' && isAdmin() && r.by !== currentUsername) pushNotif('request', 'New upload request', (r.by || 'A user') + ' sent ' + r.n + ' file(s) for ' + r.s); });
+    p.reqs.forEach((r, id) => {
+        if (r.st !== 'pending' || r.by !== currentUsername) return;
+        const x = c.reqs.get(id);
+        if (x && x.st === 'approved') pushNotif('approved', 'Upload approved', 'Your upload for ' + r.s + ' was approved');
+        else if (!x || x.st === 'rejected') pushNotif('rejected', 'Upload rejected', 'Your upload for ' + r.s + ' was not approved');
+    });
+    const touched = new Set([...c.files.values(), ...p.files.values()].map(f => f.s));
+    [...c.subj].filter(([k, v]) => !p.subj.has(k) && !touched.has(v)).forEach(([k, v]) => pushNotif('subject', 'New subject added', v));
+    [...p.subj].filter(([k, v]) => !c.subj.has(k) && !touched.has(v)).forEach(([k, v]) => pushNotif('subject', 'Subject removed', v));
+}
+// Live: somebody else changed something while this screen is open.
+function notifyAppDiff(prev, cur) {
+    if (!notifArmed) { notifArmed = true; return; }          // the very first load is never a "new" update
+    if (!prev || !cur || !currentUsername) return;
+    diffNotify(snapOf(prev), snapOf(cur));
+    saveSeen(cur);
+}
+// On open: what changed since this user last used the app.
+function notifyOnLogin() {
+    if (!currentUsername || !appData) return;
+    let o = null; try { o = JSON.parse(localStorage.getItem(seenKey()) || 'null'); } catch (e) {}
+    if (o && Array.isArray(o.f)) {
+        diffNotify({ files: new Map(o.f), reqs: new Map(o.r || []), subj: new Map(o.s || []) }, snapOf(appData));
+        if (isAdmin() && Array.isArray(o.u)) {
+            const old = new Set(o.u), fresh = Object.keys(registeredUsers || {}).filter(k => !old.has(k));
+            if (fresh.length && fresh.length <= 3) fresh.forEach(k => pushNotif('user', 'New user registered', k));
+            else if (fresh.length) pushNotif('user', 'New users registered', fresh.length + ' new users registered');
+        }
+    }
+    seenReady = true;
+    saveSeen(appData);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveSeen(appData); });
+window.addEventListener('pagehide', () => saveSeen(appData));
+const _showDashboardNotif = showDashboard;
+showDashboard = function () { _showDashboardNotif.apply(this, arguments); setTimeout(notifyOnLogin, 900); };
+// ---- Top search: always-visible box, results appear as you type (or tap the search icon) ----
+let tsActive = false, tsTimer = null;
+function topSearchInput() { clearTimeout(tsTimer); tsTimer = setTimeout(runTopSearch, 280); }
+function topSearchSubmit(e) {
+    e.preventDefault(); clearTimeout(tsTimer);
+    const inp = document.getElementById('topSearchInput');
+    if (!inp.value.trim()) { inp.focus(); return false; }
+    inp.blur();                 // close the keyboard
+    runTopSearch(true);         // explicit search: run it, then scroll down to the results
+    return false;
+}
+function runTopSearch(explicit) {
+    const inp = document.getElementById('topSearchInput'); if (!inp) return;
+    const q = inp.value.trim(); if (!q) return;
+    const fill = () => {
+        const si = document.getElementById('searchInput'); if (si) { si.value = q; performSearch(); }
+        if (explicit === true) {
+            inp.blur();         // keep the keyboard closed
+            setTimeout(() => { const c = document.getElementById('pageContainer'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 250);
+        } else inp.focus({ preventScroll: true });   // live typing: keep the keyboard open
+    };
+    if (!tsActive || !document.getElementById('searchInput')) { tsActive = true; showPage('search'); setTimeout(fill, 90); } else fill();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { const i = document.getElementById('topSearchInput'); if (i && document.activeElement === i) { i.value = ''; i.blur(); } } });
+
+// ---- Greeting line (visual only) ----
+function setHello() {
+    const el = document.getElementById('helloLine'); if (!el) return;
+    const h = new Date().getHours();
+    el.textContent = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
+const _showDashboardGreet = showDashboard;
+showDashboard = function () { _showDashboardGreet.apply(this, arguments); setHello(); };
+
+// ---- Visual effects: tile spotlight + count-up (never touches data) ----
+document.addEventListener('pointermove', e => {
+    const c = e.target.closest && e.target.closest('.glass-card'); if (!c) return;
+    const r = c.getBoundingClientRect();
+    c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px');
+}, { passive: true });
+(function () {
+    ['qpCount', 'smCount'].forEach(id => {
+        const el = document.getElementById(id); if (!el) return;
+        let last = '', token = 0;
+        const obs = new MutationObserver(() => {
+            const txt = el.textContent; if (txt === last) return; last = txt;
+            const m = /^(\d+)(.*)$/.exec(txt.trim()); if (!m) return;
+            const n = +m[1], suffix = m[2]; if (n === 0 || n > 5000) return;
+            const my = ++token, t0 = performance.now();
+            (function step(t) {
+                if (my !== token) return;
+                const k = Math.min(1, (t - t0) / 800), v = Math.round(n * (1 - Math.pow(1 - k, 3)));
+                el.textContent = k < 1 ? v + suffix : txt; obs.takeRecords();
+                if (k < 1) requestAnimationFrame(step);
+            })(t0);
+        });
+        obs.observe(el, { childList: true, characterData: true, subtree: true });
+    });
+})();
+
+// Easier access: after opening a section, bring it into view (phones show it below the tiles).
+const _showPageBase = showPage;
+showPage = function (page) {
+    _showPageBase.apply(this, arguments);
+    if (page !== 'search') tsActive = false;
+    const c = document.getElementById('pageContainer');
+    setTimeout(() => { if (page === 'dashboard' || !c) window.scrollTo({ top: 0, behavior: 'smooth' }); else c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+};
+
+document.addEventListener('pointerdown', function (e) {
+    const b = e.target.closest && e.target.closest('.btn-primary, .btn-success, .btn-danger, .tab-btn, .dept-icon-btn, .welcome-admin-btn');
+    if (!b) return;
+    const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height), sp = document.createElement('span');
+    sp.className = 'mv-ripple'; sp.style.width = sp.style.height = d + 'px'; sp.style.left = (e.clientX - r.left - d / 2) + 'px'; sp.style.top = (e.clientY - r.top - d / 2) + 'px';
+    b.appendChild(sp); setTimeout(() => sp.remove(), 650);
+});
+
+// ======================== REMEMBER LOGIN (students / faculty / admin) ========================
+// Only the username + role are kept on the device (never a password).
+// Everyone (student, faculty, admin) signs in once, then just taps Start. Logout forgets the device.
+const REMEMBER_KEY = 'mvRememberedUser';
+function rememberUser(u, r) { if (r !== 'student' && r !== 'faculty' && r !== 'admin') return; try { localStorage.setItem(REMEMBER_KEY, JSON.stringify({ u: u, r: r })); } catch (e) {} }
+function forgetUser() { try { localStorage.removeItem(REMEMBER_KEY); } catch (e) {} }
+// strict = false: before the data has loaded, trust what this device saved (so a slow connection never shows the sign-in page again).
+// strict = true : once the data is loaded, double-check the account still exists.
+function getRemembered(strict) {
+    try {
+        const x = JSON.parse(localStorage.getItem(REMEMBER_KEY) || 'null');
+        if (!x || !x.u || (x.r !== 'student' && x.r !== 'faculty' && x.r !== 'admin')) return null;
+        if (!strict) return x;
+        const reg = registeredUsers[x.u];
+        if (!reg) return null;                                   // account was removed
+        if (x.r === 'admin') return reg.role === 'admin' ? x : null;
+        return (reg.role === 'student' || reg.role === 'faculty') ? x : null;   // role = the tab used to sign in
+    } catch (e) { return null; }
+}
+const dataLoaded = () => !!(window.DBL && window.DBL.loaded);
+function initWelcome() {
+    const w = document.getElementById('welcomePage'), l = document.getElementById('loginPage'), back = document.getElementById('backToWelcome');
+    if (!w || !l) return;
+    const strict = dataLoaded();
+    const r = getRemembered(strict);
+    if (!r) { if (strict) forgetUser(); w.classList.add('hidden'); l.classList.remove('hidden'); if (back) back.classList.add('hidden'); return; }
+    const name = getStoredUserName(r.u) || (r.r === 'admin' ? 'Admin' : r.u);
+    document.getElementById('welcomeTitle').textContent = 'Welcome back, ' + name;
+    document.getElementById('welcomeSub').textContent = (r.r === 'admin' ? 'Admin' : r.r === 'faculty' ? 'Faculty' : 'Student') + ' · ' + r.u;
+    const av = document.getElementById('welcomeAvatar');
+    av.innerHTML = '<i class="fas fa-user-circle"></i>';
+    if (window.getUserProfile) window.getUserProfile(r.u).then(p => { if (p && p.avatar) { const img = document.createElement('img'); img.src = p.avatar; img.onload = () => { av.innerHTML = ''; av.appendChild(img); }; } });
+    l.classList.add('hidden'); w.classList.remove('hidden');
+    if (back) back.classList.remove('hidden');
+}
+// Slow connection: the tap is remembered and continues by itself as soon as the data is ready.
+let pendingStart = false, pendingForm = null;
+function setStartBusy(on) {
+    const b = document.getElementById('startBtn'); if (!b) return;
+    b.disabled = on;
+    b.innerHTML = on ? '<i class="fas fa-circle-notch fa-spin"></i> Please wait' : '<i class="fas fa-play"></i> Start';
+}
+document.addEventListener('submit', function (e) {
+    const id = e.target && e.target.id;
+    if (!/^(student|faculty|admin)Form$/.test(id) || dataLoaded()) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    pendingForm = id;
+    const b = e.target.querySelector('button[type="submit"], .btn-primary');
+    if (b && !b.dataset.old) { b.dataset.old = b.innerHTML; b.disabled = true; b.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Please wait'; }
+}, true);
+function afterDataReady() {
+    document.querySelectorAll('button[data-old]').forEach(b => { b.innerHTML = b.dataset.old; b.disabled = false; delete b.dataset.old; });
+    if (pendingStart) { pendingStart = false; setStartBusy(false); startRemembered(); }
+    if (pendingForm) { const f = document.getElementById(pendingForm); pendingForm = null; if (f) f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); }
+}
+document.addEventListener('DOMContentLoaded', () => initWelcome());
+function startRemembered() {
+    const r = getRemembered(dataLoaded());
+    if (!r) { initWelcome(); return; }
+    if (!dataLoaded()) { pendingStart = true; setStartBusy(true); return; }
+    currentUsername = r.u; currentRole = r.r;
+    logUserLogin(r.u, r.r);
+    loadUserAvatar(r.u);
+    document.getElementById('welcomePage').classList.add('hidden');
+    showDashboard(r.u, r.r, r.r === 'admin' ? 'Admin' : r.u);
+}
+function switchAccount() { forgetUser(); initWelcome(); }
+function openAdminLogin() {
+    document.getElementById('welcomePage').classList.add('hidden');
+    document.getElementById('loginPage').classList.remove('hidden');
+    const back = document.getElementById('backToWelcome'); if (back && getRemembered(dataLoaded())) back.classList.remove('hidden');
+    const t = document.querySelector('.tab-btn[data-tab="admin"]'); if (t) t.click();
+}
+function logoutUser() {
+    forgetUser();   // next visit asks for the one-time sign-in again
+    location.reload();
+}
 
 function showDashboard(username, role, displayName) {
     document.getElementById('loginPage').classList.add('hidden');
@@ -2624,9 +3081,9 @@ function showDashboard(username, role, displayName) {
     if (approvalsCard) approvalsCard.style.display = isAdmin() ? 'block' : 'none';
     if (monitoringCard) monitoringCard.style.display = isAdminOrFaculty() ? 'block' : 'none';
     const greeting = document.getElementById('greetingUser');
-    if (greeting) greeting.textContent = displayName + (role === 'admin' ? ' (Admin)' : role === 'faculty' ? ' (Faculty)' : '');
+    if (greeting) greeting.textContent = displayName + (role === 'faculty' ? ' (Faculty)' : '');
     const roleBadge = document.getElementById('roleBadge');
-    if (roleBadge) roleBadge.innerHTML = role === 'admin' ? '<span class="admin-badge"><i class="fas fa-user-shield"></i> Admin</span>' : '';
+    if (roleBadge) roleBadge.innerHTML = '';
     const existing = getStoredUserName(username);
     const nameDisplay = document.getElementById('userNameDisplay');
     if (existing && nameDisplay) nameDisplay.textContent = existing;
@@ -2702,8 +3159,7 @@ updateCounts();
 updatePendingBadge();
 
 console.log('✅ Medi Electro Vault - Fully Functional!');
-console.log('🔥 Firebase Realtime Database: Connected');
-console.log('📊 Supabase: Connected');
+console.log('📊 Supabase (database + realtime + storage) ready');
 console.log('📁 Admin uploads directly, Students/Faculty require approval');
 </script>
 </body>
